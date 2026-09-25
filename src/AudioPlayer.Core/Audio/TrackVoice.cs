@@ -54,7 +54,7 @@ public sealed class TrackVoice : ISampleProvider, IDisposable
     private bool autoFading;
 
     /// <summary>
-    /// Fade-out applied automatically so playback reaches silence exactly at the end point (0 = off).
+    /// Fade-out applied automatically so playback reaches silence exactly at its end (end point or end of file; 0 = off).
     /// Setting it re-arms the fade. Ignored while looping.
     /// </summary>
     public int AutoFadeOutMs

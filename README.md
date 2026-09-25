@@ -19,7 +19,7 @@ Dua jalur output terpisah: **MAIN** untuk audiens dan **MONITOR** untuk operator
 
 - **Dua output** WASAPI di device berbeda (mis. sound system + headphone), bisa diganti saat live tanpa memutus output lain.
 - **Satu daftar track**: tiap track punya tombol **Cue** (ke Monitor) dan **Play** (ke Main). Track *overlay* (jingle/SFX) bisa main di atas track utama.
-- **Auto fader**: fade-in/fade-out per track atau default global, kurva linear / equal-power, fade otomatis menjelang end point.
+- **Auto fader**: fade-in/fade-out per track atau default global, kurva linear / equal-power, fade-out otomatis menjelang akhir track (end point atau akhir file).
 - **Start/end point** per track, bisa di-drag langsung di seek bar.
 - **Seek bar dengan waveform** yang dibentuk oleh kurva fade, penanda start/end, dan label waktu saat hover.
 - **Fader** per track dan master MAIN/MONITOR bergaya mixing console, dengan **peak meter** stereo (peak hold + lampu clip) di tiap output.
@@ -85,7 +85,7 @@ Panel **Cue / Preview** menampilkan track yang sedang di-cue (atau track yang di
 
 - **Waveform** di seek bar sudah dibentuk oleh kurva fade — yang terlihat adalah yang akan terdengar.
 - **Start / end point**: drag penanda putih di tepi rentang, atau posisikan playhead lalu klik **⇤ Set start** / **Set end ⇥**. **Reset** kembali ke seluruh file. Area di luar rentang diredupkan.
-- Bila end point diset, track otomatis fade-out tepat sampai senyap di end point.
+- Track selalu fade-out sendiri menjelang akhirnya — di end point bila diset, atau di akhir file — sehingga tidak pernah terpotong mendadak (kecuali track Loop, yang terus berulang).
 - Arahkan mouse ke seek bar untuk melihat waktu persis di posisi itu; klik atau drag untuk berpindah posisi.
 - **▶ Cue** (`F7`) mulai preview dari posisi kursor; **■** (`F8`) menghentikannya.
 

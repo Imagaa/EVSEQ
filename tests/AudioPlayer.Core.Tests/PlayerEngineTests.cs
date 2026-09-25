@@ -199,6 +199,29 @@ public class PlayerEngineTests : IDisposable
     }
 
     [Fact]
+    public void PlayingToTheEndOfTheFileFadesOut()
+    {
+        var t = NewTrack(0.5);                    // no end point: plays to the end of the file
+        engine.DefaultFade.FadeOutMs = 200;
+        engine.Play(t);
+        Pull(main, 300);                          // up to the start of the fade zone
+        var tail = Pull(main, 200);               // the last 200 ms of the file
+        Assert.True(Rms(tail[..960]) > 0.3f, "fade should start near full level");
+        Assert.True(Rms(tail[^960..]) < 0.05f, "track should reach silence at its end");
+    }
+
+    [Fact]
+    public void LoopingTrackDoesNotFadeAtFileEnd()
+    {
+        var t = NewTrack(0.5);
+        t.Loop = true;
+        engine.DefaultFade.FadeOutMs = 200;
+        engine.Play(t);
+        Pull(main, 300);
+        Assert.True(Rms(Pull(main, 200)[^960..]) > 0.3f);
+    }
+
+    [Fact]
     public void StopDuringAutoFadeStillReleasesVoice()
     {
         var t = NewTrack(2);

@@ -131,8 +131,8 @@ public sealed partial class SeekBarViewModel(PlayerEngine engine, BusKind bus) :
         FadeIn = t.FadeInSeconds;
         FadeOut = t.FadeOutSeconds;
         Peaks = t.Peaks;
-        // The engine only auto-fades before an end point; while dragging, preview what the new point will do.
-        ShowFadeOut = IsEditingRange ? RangeEnd < Duration - 0.05 : t.Track.EndMs is not null;
+        // The engine fades out before the end (end point or end of file), except when looping.
+        ShowFadeOut = !t.Loop;
         Curve = t.Curve;
         if (!IsDragging && engine.GetPosition(t.Track, bus) is { } p) position = p.TotalSeconds;
         OnPropertyChanged(nameof(Position));

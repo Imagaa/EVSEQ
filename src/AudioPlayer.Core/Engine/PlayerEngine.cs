@@ -142,12 +142,15 @@ public sealed class PlayerEngine : IDisposable
         return v;
     }
 
-    /// <summary>With an end point set, fade out so the track reaches silence exactly there.</summary>
+    /// <summary>
+    /// Fade out so the track reaches silence exactly where it ends: at the end point, or at the end of the
+    /// file when none is set. (TrackVoice skips this while looping.)
+    /// </summary>
     private void ArmAutoFade(Voice v)
     {
         var f = FadeOf(v.Track);
         v.Audio.AutoFadeCurve = f.Curve;
-        v.Audio.AutoFadeOutMs = v.Track.EndMs is null ? 0 : f.FadeOutMs;
+        v.Audio.AutoFadeOutMs = f.FadeOutMs;
     }
 
     private void StopVoice(Voice v)
