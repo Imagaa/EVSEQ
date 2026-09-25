@@ -1,6 +1,9 @@
 #define AppName "Event Sequencer"
 #define AppShortName "EVSEQ"
-#define AppVersion "0.2.0"
+; build.ps1 -Version passes /DAppVersion=x.y.z; this default is used for plain local builds
+#ifndef AppVersion
+  #define AppVersion "0.2.0"
+#endif
 #define AppExe "EVSEQ.exe"
 
 [Setup]
