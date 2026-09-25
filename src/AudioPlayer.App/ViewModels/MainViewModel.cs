@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Windows;
 using System.Windows.Threading;
 using AudioPlayer.Core.Audio;
 using AudioPlayer.Core.Engine;
@@ -17,6 +18,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public MainViewModel()
     {
         Engine = new PlayerEngine(new OutputBus(), new OutputBus());
+        Devices.DeviceUnavailable += id =>
+            Application.Current.Dispatcher.InvokeAsync(() => OnDeviceUnavailable(id));
+        Engine.Main.PlaybackFailed += (_, ex) => BusFailed(BusKind.Main, ex.Message);
+        Engine.Monitor.PlaybackFailed += (_, ex) => BusFailed(BusKind.Monitor, ex.Message);
         Load(new Project(), null);
         timer.Tick += (_, _) => Tick();
         timer.Start();
@@ -33,6 +38,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] public partial string TotalText { get; set; } = "00:00";
     [ObservableProperty] public partial string NowPlayingText { get; set; } = "";
     [ObservableProperty] public partial bool IsDirty { get; set; }
+    [ObservableProperty] public partial string? Alert { get; set; }
 
     public double MainVolumeDb
     {
@@ -61,6 +67,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Tracks.Clear();
         foreach (var t in project.Tracks) Tracks.Add(new TrackViewModel(t, this));
         Renumber();
+        Alert = null;
         ApplyDevices();
         OnPropertyChanged(nameof(MainVolumeDb));
         OnPropertyChanged(nameof(MonitorVolumeDb));
@@ -103,6 +110,53 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         // Monitor never falls back to the default device: preview must not leak to the audience.
         if (Engine.Monitor.DeviceId is null) notes.Add("Device Monitor belum dipilih — buka Settings.");
         Status = string.Join("  ", notes);
+    }
+
+    public void ApplySettings(string? mainDeviceId, string? monitorDeviceId, FadeSettings fade)
+    {
+        bool devicesChanged = mainDeviceId != Project.MainDeviceId || monitorDeviceId != Project.MonitorDeviceId;
+        Project.MainDeviceId = mainDeviceId;
+        Project.MonitorDeviceId = monitorDeviceId;
+        Project.DefaultFade = fade;
+        Engine.DefaultFade = fade;
+        if (devicesChanged)
+        {
+            Alert = null;
+            ApplyDevices();
+        }
+        IsDirty = true;
+    }
+
+    [RelayCommand]
+    private void UseDefaultForMain()
+    {
+        try
+        {
+            Engine.Main.AttachDevice(Devices.Default());
+            Alert = null;
+        }
+        catch (COMException ex)
+        {
+            Alert = $"Gagal membuka device default: {ex.Message}";
+        }
+    }
+
+    [RelayCommand] private void DismissAlert() => Alert = null;
+
+    private void OnDeviceUnavailable(string id)
+    {
+        if (id == Engine.Main.DeviceId) BusFailed(BusKind.Main, "device dicabut/nonaktif");
+        else if (id == Engine.Monitor.DeviceId) BusFailed(BusKind.Monitor, "device dicabut/nonaktif");
+    }
+
+    private void BusFailed(BusKind bus, string reason)
+    {
+        var b = bus == BusKind.Main ? Engine.Main : Engine.Monitor;
+        if (b.DeviceId is null) return; // already reported
+        b.DetachDevice(); // voices stay in the mixer and resume where they were once a device is attached
+        Alert = bus == BusKind.Main
+            ? $"⚠ Output MAIN terputus ({reason}). Tekan 'Pakai device default' atau pilih device di Settings."
+            : $"⚠ Output MONITOR terputus ({reason}). Pilih device baru di Settings.";
     }
 
     [RelayCommand]

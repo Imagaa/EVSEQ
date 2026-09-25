@@ -24,4 +24,7 @@ public partial class MainWindow : Window
         };
         if (dlg.ShowDialog(this) == true) vm.AddFiles(dlg.FileNames);
     }
+
+    private void Settings_Click(object sender, RoutedEventArgs e) =>
+        new SettingsWindow(vm) { Owner = this }.ShowDialog();
 }

@@ -7,7 +7,25 @@
             <MenuItem Header="_File" x:Name="FileMenu">
                 <MenuItem Header="_Tambah file audio..." Click="AddFiles_Click"/>
             </MenuItem>
+            <MenuItem Header="_Settings..." Click="Settings_Click"/>
         </Menu>
+
+        <Border DockPanel.Dock="Top" Background="#B71C1C" Padding="10,6">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Alert}" Value="{x:Null}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Tutup" Command="{Binding DismissAlertCommand}" Focusable="False" Margin="6,0,0,0"/>
+                <Button DockPanel.Dock="Right" Content="Pakai device default (Main)" Command="{Binding UseDefaultForMainCommand}" Focusable="False"/>
+                <TextBlock Text="{Binding Alert}" Foreground="White" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" TextWrapping="Wrap"/>
+            </DockPanel>
+        </Border>
 
         <!-- Master faders: large and color-coded so they are easy to tell apart live -->
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8">
