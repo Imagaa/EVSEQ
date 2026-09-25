@@ -8,6 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>EVSEQ</AssemblyName>
     <Product>Event Sequencer</Product>
+    <ApplicationIcon>..\..\assets\brand\evseq.ico</ApplicationIcon>
     <Version>0.2.0</Version>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -15,6 +16,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AudioPlayer.Core\AudioPlayer.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Brand assets live in /assets/brand; linked in as WPF resources -->
+  <ItemGroup>
+    <Resource Include="..\..\assets\brand\evseq.ico" Link="Assets\evseq.ico" />
+    <Resource Include="..\..\assets\brand\evseq-logo.png" Link="Assets\evseq-logo.png" />
   </ItemGroup>
 
   <ItemGroup>

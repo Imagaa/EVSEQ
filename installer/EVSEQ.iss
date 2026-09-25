@@ -22,7 +22,10 @@ WizardStyle=modern
 LicenseFile=..\LICENSE
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName} ({#AppShortName})
-; App icon: add SetupIconFile=EVSEQ.ico once the logo is ready.
+; Brand: logo mark as the setup/uninstall icon; the wizard is light, so the full logo reads well there
+SetupIconFile=..\assets\brand\evseq.ico
+WizardImageFile=wizard-large.png
+WizardSmallImageFile=wizard-small.png
 ; Code signing (F8): enable once a certificate is available:
 ; SignTool=signtool sign /fd sha256 /tr http://timestamp.digicert.com /td sha256 /f "cert.pfx" /p "$PASSWORD" $f
 ; SignedUninstaller=yes

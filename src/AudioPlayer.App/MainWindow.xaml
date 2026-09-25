@@ -5,7 +5,8 @@
         xmlns:adt="clr-namespace:AvalonDock.Themes;assembly=AvalonDock.Themes.VS2013"
         xmlns:c="clr-namespace:AudioPlayer.App.Controls"
         Title="{Binding WindowTitle}" Height="720" Width="1280" MinWidth="900" MinHeight="560"
-        WindowState="Maximized" Background="{StaticResource Ap.Bg}" Foreground="{StaticResource Ap.Text}">
+        WindowState="Maximized" Background="{StaticResource Ap.Bg}" Foreground="{StaticResource Ap.Text}"
+        Icon="/Assets/evseq.ico">
     <Window.CommandBindings>
         <CommandBinding Command="New" Executed="New_Executed"/>
         <CommandBinding Command="Open" Executed="Open_Executed"/>
@@ -69,6 +70,8 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <WrapPanel VerticalAlignment="Center">
+                    <Image Source="/Assets/evseq-logo.png" Height="30" Margin="0,-4,8,-4" VerticalAlignment="Center"
+                           RenderOptions.BitmapScalingMode="HighQuality" ToolTip="Event Sequencer (EVSEQ)"/>
                     <TextBlock Text="{Binding ProjectName}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" Margin="2,0,18,0"
                                MaxWidth="260" TextTrimming="CharacterEllipsis"/>
                     <Button Command="New" Content="Baru" Style="{StaticResource Ap.ToolButton}" ToolTip="Project baru (Ctrl+N)"/>
@@ -289,9 +292,15 @@
                                     <Border Background="{StaticResource Ap.Bg}" Visibility="{Binding ShowWelcome, Converter={StaticResource BoolToVisibility}}">
                                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                                         <StackPanel MaxWidth="620" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                            <TextBlock FontSize="32" FontWeight="SemiBold">
-                                                <Run Text="Event Sequencer"/><Run Text="  EVSEQ" FontSize="16" Foreground="{StaticResource Ap.SubText}"/>
-                                            </TextBlock>
+                                            <!-- Mark only: the full logo's navy lettering disappears on this dark theme -->
+                                            <StackPanel Orientation="Horizontal">
+                                                <Image Source="/Assets/evseq-logo.png" Height="84" Margin="-10,-12,6,-12" VerticalAlignment="Center"
+                                                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <TextBlock Text="Event Sequencer" FontSize="32" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="EVSEQ" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource Ap.SubText}" Margin="2,-2,0,0"/>
+                                                </StackPanel>
+                                            </StackPanel>
                                             <TextBlock Text="Mulai dengan menambahkan track, atau buka project yang sudah disimpan."
                                                        Style="{StaticResource Ap.Caption}" Margin="0,4,0,22" TextWrapping="Wrap"/>
                                             <WrapPanel Margin="0,0,0,28">

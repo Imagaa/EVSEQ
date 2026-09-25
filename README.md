@@ -1,3 +1,11 @@
+<p align="center">
+  <picture>
+    <!-- The full logo's navy lettering disappears on GitHub's dark theme, so dark mode shows the mark only -->
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/evseq-logo.png">
+    <img src="assets/brand/evseq-full-logo.png" alt="Event Sequencer (EVSEQ)" width="240">
+  </picture>
+</p>
+
 # Event Sequencer (EVSEQ)
 
 Pemutar audio multi-track untuk operator event (wedding, seminar, gathering, siaran), native Windows.
