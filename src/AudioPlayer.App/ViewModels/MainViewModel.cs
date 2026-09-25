@@ -1,0 +1,198 @@
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Windows.Threading;
+using AudioPlayer.Core.Audio;
+using AudioPlayer.Core.Engine;
+using AudioPlayer.Core.Model;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+
+namespace AudioPlayer.App.ViewModels;
+
+public sealed partial class MainViewModel : ObservableObject, IDisposable
+{
+    private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(100) };
+
+    public MainViewModel()
+    {
+        Engine = new PlayerEngine(new OutputBus(), new OutputBus());
+        Load(new Project(), null);
+        timer.Tick += (_, _) => Tick();
+        timer.Start();
+    }
+
+    public PlayerEngine Engine { get; }
+    public AudioDevices Devices { get; } = new();
+    public Project Project { get; private set; } = new();
+    public string? ProjectPath { get; private set; }
+    public ObservableCollection<TrackViewModel> Tracks { get; } = [];
+
+    [ObservableProperty] public partial TrackViewModel? Selected { get; set; }
+    [ObservableProperty] public partial string Status { get; set; } = "";
+    [ObservableProperty] public partial string TotalText { get; set; } = "00:00";
+    [ObservableProperty] public partial string NowPlayingText { get; set; } = "";
+    [ObservableProperty] public partial bool IsDirty { get; set; }
+
+    public double MainVolumeDb
+    {
+        get => Project.MainVolumeDb;
+        set { Project.MainVolumeDb = value; Engine.Main.VolumeDb = value; OnPropertyChanged(); IsDirty = true; }
+    }
+
+    public double MonitorVolumeDb
+    {
+        get => Project.MonitorVolumeDb;
+        set { Project.MonitorVolumeDb = value; Engine.Monitor.VolumeDb = value; OnPropertyChanged(); IsDirty = true; }
+    }
+
+    public static string Fmt(TimeSpan t) => t.TotalHours >= 1 ? t.ToString(@"h\:mm\:ss") : t.ToString(@"mm\:ss");
+
+    public void MarkDirty() => IsDirty = true;
+
+    public void Load(Project project, string? path)
+    {
+        Engine.Panic();
+        Project = project;
+        ProjectPath = path;
+        Engine.DefaultFade = project.DefaultFade;
+        Engine.Main.VolumeDb = project.MainVolumeDb;
+        Engine.Monitor.VolumeDb = project.MonitorVolumeDb;
+        Tracks.Clear();
+        foreach (var t in project.Tracks) Tracks.Add(new TrackViewModel(t, this));
+        Renumber();
+        ApplyDevices();
+        OnPropertyChanged(nameof(MainVolumeDb));
+        OnPropertyChanged(nameof(MonitorVolumeDb));
+        IsDirty = false;
+    }
+
+    public void AddFiles(IEnumerable<string> paths)
+    {
+        foreach (var p in paths)
+        {
+            var t = new Track { FilePath = p, Title = Path.GetFileNameWithoutExtension(p) };
+            Project.Tracks.Add(t);
+            Tracks.Add(new TrackViewModel(t, this));
+        }
+        Renumber();
+        IsDirty = true;
+    }
+
+    public void ApplyDevices()
+    {
+        var notes = new List<string>();
+        try
+        {
+            var main = Devices.Find(Project.MainDeviceId);
+            if (main is null && Project.MainDeviceId is not null) notes.Add("Device Main tersimpan tidak ditemukan — memakai device default.");
+            Engine.Main.AttachDevice(main ?? Devices.Default());
+        }
+        catch (COMException ex)
+        {
+            notes.Add($"Gagal membuka device Main: {ex.Message}");
+        }
+        try
+        {
+            Engine.Monitor.AttachDevice(Devices.Find(Project.MonitorDeviceId));
+        }
+        catch (COMException ex)
+        {
+            notes.Add($"Gagal membuka device Monitor: {ex.Message}");
+        }
+        // Monitor never falls back to the default device: preview must not leak to the audience.
+        if (Engine.Monitor.DeviceId is null) notes.Add("Device Monitor belum dipilih — buka Settings.");
+        Status = string.Join("  ", notes);
+    }
+
+    [RelayCommand]
+    private void PlayPause(TrackViewModel? t) => Run(t, x =>
+    {
+        if (Engine.GetState(x.Track, BusKind.Main) == PlayState.Playing) Engine.Pause(x.Track, BusKind.Main);
+        else Engine.Play(x.Track);
+    });
+
+    [RelayCommand] private void Stop(TrackViewModel? t) => Run(t, x => Engine.Stop(x.Track, BusKind.Main));
+
+    [RelayCommand] private void Preview(TrackViewModel? t) => Run(t, x => Engine.Preview(x.Track));
+
+    [RelayCommand]
+    private void Panic()
+    {
+        Engine.Panic();
+        Status = "PANIC — semua track dihentikan.";
+    }
+
+    [RelayCommand]
+    private void Remove(TrackViewModel? t) => Run(t, x =>
+    {
+        Engine.Stop(x.Track, BusKind.Main);
+        Engine.Stop(x.Track, BusKind.Monitor);
+        Project.Tracks.Remove(x.Track);
+        Tracks.Remove(x);
+        Renumber();
+        IsDirty = true;
+    });
+
+    [RelayCommand] private void MoveUp(TrackViewModel? t) => Move(t, -1);
+    [RelayCommand] private void MoveDown(TrackViewModel? t) => Move(t, +1);
+
+    public void Dispose()
+    {
+        timer.Stop();
+        Engine.Dispose();
+        Engine.Main.Dispose();
+        Engine.Monitor.Dispose();
+        Devices.Dispose();
+    }
+
+    private void Move(TrackViewModel? t, int delta)
+    {
+        t ??= Selected;
+        if (t is null) return;
+        int i = Tracks.IndexOf(t), j = i + delta;
+        if (j < 0 || j >= Tracks.Count) return;
+        Tracks.Move(i, j);
+        Project.Tracks.RemoveAt(i);
+        Project.Tracks.Insert(j, t.Track);
+        Renumber();
+        Selected = t;
+        IsDirty = true;
+    }
+
+    private void Run(TrackViewModel? t, Action<TrackViewModel> action)
+    {
+        t ??= Selected;
+        if (t is null) return;
+        try
+        {
+            action(t);
+            Status = "";
+        }
+        catch (Exception ex)
+        {
+            Status = $"{t.Title}: {ex.Message}";
+        }
+    }
+
+    private void Renumber()
+    {
+        for (int i = 0; i < Tracks.Count; i++) Tracks[i].Number = i + 1;
+        TotalText = Fmt(TimeSpan.FromTicks(Tracks.Sum(t => t.Duration.Ticks)));
+    }
+
+    private void Tick()
+    {
+        Engine.Pump();
+        var now = "";
+        foreach (var t in Tracks)
+        {
+            t.MainState = Engine.GetState(t.Track, BusKind.Main);
+            t.MonitorState = Engine.GetState(t.Track, BusKind.Monitor);
+            var rem = Engine.GetRemaining(t.Track, BusKind.Main) ?? Engine.GetRemaining(t.Track, BusKind.Monitor);
+            t.RemainingText = rem is { } r ? "-" + Fmt(r) : "";
+            if (t.MainState == PlayState.Playing && !t.Overlay && rem is { } nr) now = $"▶ {t.Title}   -{Fmt(nr)}";
+        }
+        NowPlayingText = now;
+    }
+}

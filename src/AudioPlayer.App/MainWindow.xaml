@@ -1,0 +1,118 @@
+<Window x:Class="AudioPlayer.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Audio Player" Height="640" Width="1100">
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File" x:Name="FileMenu">
+                <MenuItem Header="_Tambah file audio..." Click="AddFiles_Click"/>
+            </MenuItem>
+        </Menu>
+
+        <!-- Master faders: large and color-coded so they are easy to tell apart live -->
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8">
+            <StackPanel Margin="6,0">
+                <TextBlock Text="MAIN" FontWeight="Bold" Foreground="White" Background="#C62828" Padding="8,2" HorizontalAlignment="Center"/>
+                <Slider Orientation="Vertical" Height="320" Minimum="-60" Maximum="0" SmallChange="0.5" LargeChange="3"
+                        Value="{Binding MainVolumeDb}" HorizontalAlignment="Center" Margin="0,6" Focusable="False"/>
+                <TextBlock Text="{Binding MainVolumeDb, StringFormat={}{0:0.0} dB}" HorizontalAlignment="Center"/>
+            </StackPanel>
+            <StackPanel Margin="6,0">
+                <TextBlock Text="MONITOR" FontWeight="Bold" Foreground="White" Background="#1565C0" Padding="8,2" HorizontalAlignment="Center"/>
+                <Slider Orientation="Vertical" Height="320" Minimum="-60" Maximum="0" SmallChange="0.5" LargeChange="3"
+                        Value="{Binding MonitorVolumeDb}" HorizontalAlignment="Center" Margin="0,6" Focusable="False"/>
+                <TextBlock Text="{Binding MonitorVolumeDb, StringFormat={}{0:0.0} dB}" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </StackPanel>
+
+        <Grid DockPanel.Dock="Bottom" Margin="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock VerticalAlignment="Center" FontSize="14">
+                <Run Text="Total: "/><Run Text="{Binding TotalText, Mode=OneWay}"/>
+            </TextBlock>
+            <StackPanel Grid.Column="1" Margin="16,0">
+                <TextBlock Text="{Binding NowPlayingText}" FontSize="20" FontWeight="Bold"/>
+                <TextBlock Text="{Binding Status}" Foreground="#B71C1C" TextWrapping="Wrap"/>
+            </StackPanel>
+            <Button Grid.Column="2" Content="PANIC" Command="{Binding PanicCommand}" Focusable="False"
+                    Background="#B71C1C" Foreground="White" FontWeight="Bold" FontSize="18" Padding="24,10"
+                    ToolTip="Stop semua track Main &amp; Monitor seketika"/>
+        </Grid>
+
+        <ListView x:Name="TrackList" ItemsSource="{Binding Tracks}" SelectedItem="{Binding Selected}">
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding MainState}" Value="Playing">
+                            <Setter Property="Background" Value="#C8E6C9"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding MainState}" Value="Paused">
+                            <Setter Property="Background" Value="#FFF9C4"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsMissing}" Value="True">
+                            <Setter Property="Foreground" Value="Red"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ListView.ItemContainerStyle>
+            <ListView.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Naik" Command="{Binding MoveUpCommand}"/>
+                    <MenuItem Header="Turun" Command="{Binding MoveDownCommand}"/>
+                    <Separator/>
+                    <MenuItem Header="Hapus dari list" Command="{Binding RemoveCommand}"/>
+                </ContextMenu>
+            </ListView.ContextMenu>
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Header="#" DisplayMemberBinding="{Binding Number}" Width="36"/>
+                    <GridViewColumn Header="Judul" DisplayMemberBinding="{Binding Title}" Width="280"/>
+                    <GridViewColumn Header="Durasi" DisplayMemberBinding="{Binding DurationText}" Width="70"/>
+                    <GridViewColumn Header="Sisa" DisplayMemberBinding="{Binding RemainingText}" Width="70"/>
+                    <GridViewColumn Header="Transport" Width="180">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="{Binding PreviewLabel}" Width="56" Focusable="False" ToolTip="Preview di Monitor"
+                                            Command="{Binding DataContext.PreviewCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                            CommandParameter="{Binding}"/>
+                                    <Button Content="{Binding PlayLabel}" Width="40" Margin="4,0" Focusable="False" ToolTip="Play/Pause di Main"
+                                            Command="{Binding DataContext.PlayPauseCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                            CommandParameter="{Binding}"/>
+                                    <Button Content="■" Width="40" Focusable="False" ToolTip="Stop Main"
+                                            Command="{Binding DataContext.StopCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                            CommandParameter="{Binding}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Loop" Width="50">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate><CheckBox IsChecked="{Binding Loop}" Focusable="False"/></DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Overlay" Width="60">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate><CheckBox IsChecked="{Binding Overlay}" Focusable="False" ToolTip="Main di atas track lain tanpa menghentikannya (jingle/SFX)"/></DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Volume" Width="210">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Slider Width="140" Minimum="-60" Maximum="0" SmallChange="0.5" Value="{Binding VolumeDb}" Focusable="False"/>
+                                    <TextBlock Text="{Binding VolumeDb, StringFormat={}{0:0.0} dB}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                </GridView>
+            </ListView.View>
+        </ListView>
+    </DockPanel>
+</Window>
