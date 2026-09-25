@@ -1,4 +1,11 @@
+## Perubahan
+
+{{CHANGES}}
+
 ## Unduh & pasang
+
+Sudah memakai EVSEQ 0.3.0 atau lebih baru? Update ini akan diunduh otomatis dan dipasang saat EVSEQ ditutup.
+
 
 1. Unduh **`EVSEQ-Setup-{{VERSION}}.exe`** di bagian *Assets* di bawah.
 2. Jalankan installernya. Installer bersifat offline dan sudah membawa runtime .NET, jadi tidak perlu memasang apa pun lagi.

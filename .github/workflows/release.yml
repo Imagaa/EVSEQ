@@ -20,6 +20,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # full history and tags, for the list of changes since the previous release
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -46,7 +48,16 @@ jobs:
           $name = 'EVSEQ-Setup-${{ steps.version.outputs.value }}.exe'
           $hash = (Get-FileHash "artifacts/installer/$name" -Algorithm SHA256).Hash
           "$hash  $name" | Set-Content artifacts/installer/SHA256SUMS.txt
-          (Get-Content .github/release-notes.md -Raw).Replace('{{VERSION}}', '${{ steps.version.outputs.value }}').Replace('{{SHA256}}', $hash) |
+
+          # Changes: commit subjects since the previous release tag
+          $ref = if ('${{ github.event_name }}' -eq 'push') { '${{ github.ref_name }}' } else { 'HEAD' }
+          $prev = git describe --tags --abbrev=0 "$ref^" 2>$null
+          $range = if ($prev) { "$prev..$ref" } else { $ref }
+          $changes = (git log $range --no-merges --pretty='- %s' | Out-String).Trim()
+          if (-not $changes) { $changes = '- (tidak ada perubahan)' }
+          "Changes since ${prev}:`n$changes"
+
+          (Get-Content .github/release-notes.md -Raw).Replace('{{VERSION}}', '${{ steps.version.outputs.value }}').Replace('{{SHA256}}', $hash).Replace('{{CHANGES}}', $changes) |
             Set-Content artifacts/release-notes.md
 
       - uses: actions/upload-artifact@v7

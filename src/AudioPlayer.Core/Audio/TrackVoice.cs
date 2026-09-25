@@ -39,14 +39,27 @@ public sealed class TrackVoice : ISampleProvider, IDisposable
 
     public float Volume { get => volume.Gain; set => volume.Gain = value; }
 
-    public TimeSpan Position => reader.CurrentTime;
+    /// <summary>Current position; a seek that is still waiting for the next buffer already counts.</summary>
+    public TimeSpan Position
+    {
+        get { lock (gate) return PositionUnlocked; }
+    }
 
     public TimeSpan Duration => reader.TotalTime;
 
     /// <summary>End point, or end of file when none is set.</summary>
     public TimeSpan End => looper.End ?? reader.TotalTime;
 
-    public TimeSpan Remaining => End > Position ? End - Position : TimeSpan.Zero;
+    public TimeSpan Remaining
+    {
+        get { lock (gate) return RemainingUnlocked; }
+    }
+
+    private const int DeclickFrames = 240; // 5 ms at 48 kHz on each side of a seek
+    private TimeSpan? pendingSeek;         // applied inside the next Read, between a ramp down and a ramp up
+
+    private TimeSpan PositionUnlocked => pendingSeek ?? reader.CurrentTime;
+    private TimeSpan RemainingUnlocked => End > PositionUnlocked ? End - PositionUnlocked : TimeSpan.Zero;
 
     /// <summary>Once set and the fade-out has finished, outputs silence without advancing the file.</summary>
     public volatile bool Paused;
@@ -74,18 +87,22 @@ public sealed class TrackVoice : ISampleProvider, IDisposable
         }
     }
 
-    // ponytail: hard jump, may click when seeking audible audio; add a short dip-fade if operators seek live
-    public void Seek(TimeSpan position)
+    /// <summary>
+    /// Moves the play position. With <paramref name="smooth"/> (the default) the jump happens inside the next
+    /// audio buffer between a 5 ms ramp down and a 5 ms ramp up, so seeking audible audio never clicks.
+    /// Silent (paused) voices and the initial start position jump immediately.
+    /// </summary>
+    public void Seek(TimeSpan position, bool smooth = true)
     {
         if (position < TimeSpan.Zero) position = TimeSpan.Zero;
         if (position > reader.TotalTime) position = reader.TotalTime;
         lock (gate)
         {
-            reader.CurrentTime = position;
-            if (autoFading && Remaining.TotalMilliseconds > AutoFadeOutMs)
+            if (smooth && !(Paused && !Fader.IsFading)) pendingSeek = position;
+            else
             {
-                autoFading = false; // moved back out of the fade zone: bring the level back
-                Fader.FadeTo(1f, 30, FadeCurve.Linear);
+                pendingSeek = null;
+                ApplySeek(position);
             }
         }
     }
@@ -101,14 +118,51 @@ public sealed class TrackVoice : ISampleProvider, IDisposable
         {
             if (AutoFadeOutMs > 0 && !autoFading && !Loop && !Paused)
             {
-                var left = Remaining.TotalMilliseconds;
+                var left = RemainingUnlocked.TotalMilliseconds;
                 if (left <= AutoFadeOutMs)
                 {
                     Fader.FadeTo(0f, (int)left, AutoFadeCurve);
                     autoFading = true;
                 }
             }
-            return volume.Read(buffer);
+            return pendingSeek is { } target ? ReadAcrossSeek(buffer, target) : volume.Read(buffer);
+        }
+    }
+
+    /// <summary>Old position ramped down, jump, new position ramped up — all within this buffer.</summary>
+    private int ReadAcrossSeek(Span<float> buffer, TimeSpan target)
+    {
+        int ch = WaveFormat.Channels;
+        int rampFrames = Math.Max(1, Math.Min(DeclickFrames, buffer.Length / ch / 2));
+
+        int before = volume.Read(buffer[..(rampFrames * ch)]);
+        int framesBefore = before / ch;
+        for (int f = 0; f < framesBefore; f++)
+        {
+            float g = 1f - (f + 1f) / framesBefore;
+            for (int c = 0; c < ch; c++) buffer[f * ch + c] *= g;
+        }
+
+        pendingSeek = null;
+        ApplySeek(target);
+
+        int after = volume.Read(buffer[before..]);
+        int framesUp = Math.Min(rampFrames, after / ch);
+        for (int f = 0; f < framesUp; f++)
+        {
+            float g = (f + 1f) / (framesUp + 1f);
+            for (int c = 0; c < ch; c++) buffer[before + f * ch + c] *= g;
+        }
+        return before + after;
+    }
+
+    private void ApplySeek(TimeSpan position)
+    {
+        reader.CurrentTime = position;
+        if (autoFading && RemainingUnlocked.TotalMilliseconds > AutoFadeOutMs)
+        {
+            autoFading = false; // moved back out of the fade zone: bring the level back
+            Fader.FadeTo(1f, 30, FadeCurve.Linear);
         }
     }
 

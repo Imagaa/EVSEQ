@@ -175,8 +175,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public void RangesChanged() => Renumber();
 
     // One file decoded at a time so waveform work never competes with playback for CPU.
-    // ponytail: peaks recomputed every time a project opens; add a disk cache if big libraries load slowly
     private readonly SemaphoreSlim waveformGate = new(1);
+    private readonly WaveformCache waveformCache = new(Path.Combine(AppPaths.DataDir, "waveforms"));
 
     private async void LoadWaveform(TrackViewModel t)
     {
@@ -186,7 +186,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             if (!Tracks.Contains(t)) return; // removed or project closed while queued
             var path = t.Track.FilePath;
-            t.Peaks = await Task.Run(() => Waveform.ComputePeaks(path));
+            t.Peaks = await Task.Run(() => waveformCache.GetOrCompute(path));
         }
         catch (Exception ex)
         {

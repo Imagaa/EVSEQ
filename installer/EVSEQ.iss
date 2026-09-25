@@ -2,7 +2,7 @@
 #define AppShortName "EVSEQ"
 ; build.ps1 -Version passes /DAppVersion=x.y.z; this default is used for plain local builds
 #ifndef AppVersion
-  #define AppVersion "0.3.0"
+  #define AppVersion "0.3.1"
 #endif
 #define AppExe "EVSEQ.exe"
 
@@ -23,6 +23,8 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 LicenseFile=..\LICENSE
+; Tell Explorer about the .approj association so icons/double-click work right away
+ChangesAssociations=yes
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName} ({#AppShortName})
 ; Brand: logo mark as the setup/uninstall icon; the wizard is light, so the full logo reads well there
@@ -40,6 +42,14 @@ Name: "desktopicon"; Description: "Buat ikon di desktop"; Flags: unchecked
 Source: "..\artifacts\publish\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
 Source: "..\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; DestName: "THIRD-PARTY-NOTICES.txt"; Flags: ignoreversion
+
+[Registry]
+; .approj opens in EVSEQ (double-click in Explorer); removed again on uninstall
+Root: HKA; Subkey: "Software\Classes\.approj"; ValueType: string; ValueName: ""; ValueData: "EVSEQ.Project"; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\.approj\OpenWithProgids"; ValueType: string; ValueName: "EVSEQ.Project"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\EVSEQ.Project"; ValueType: string; ValueName: ""; ValueData: "Project EVSEQ"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\EVSEQ.Project\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#AppExe},0"
+Root: HKA; Subkey: "Software\Classes\EVSEQ.Project\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"" ""%1"""
 
 [InstallDelete]
 ; executable of the earlier "Audio Player" builds, replaced by EVSEQ.exe

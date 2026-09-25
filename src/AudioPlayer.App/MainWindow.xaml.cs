@@ -86,6 +86,14 @@ public partial class MainWindow : Window
         };
     }
 
+    /// <summary>A .approj opened from Explorer while EVSEQ is already running.</summary>
+    public void OpenFromShell(string path)
+    {
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Maximized;
+        Activate();
+        if (ConfirmDiscard()) OpenProject(path);
+    }
+
     // ---- Dock layout: remembered between runs, with a reset to the built-in default ----
 
     private string SerializeLayout()

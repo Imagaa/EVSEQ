@@ -129,7 +129,7 @@ public sealed class PlayerEngine : IDisposable
         {
             v = new Voice(t, bus, new TrackVoice(t.FilePath, OutputBus.Format, Db.ToGain(t.VolumeDb)));
             v.Audio.SetRange(StartOf(t), EndOf(t));
-            v.Audio.Seek(StartOf(t));
+            v.Audio.Seek(StartOf(t), smooth: false); // silent until the fade-in starts: no declick needed
             active.Add(v);
             BusOf(bus).Mixer.AddMixerInput(v.Audio);
         }

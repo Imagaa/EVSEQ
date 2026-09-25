@@ -48,7 +48,7 @@ Saat daftar track masih kosong, EVSEQ menampilkan welcome screen:
 - **＋ Tambah folder** — semua audio di folder (termasuk subfolder) masuk berurutan sesuai nama file.
 - **Buka project** (`Ctrl+O`) atau klik salah satu **Project terakhir**.
 
-Project juga bisa dibuka langsung dari command line: `EVSEQ.exe "D:\Show\Wedding.approj"`.
+File project `.approj` juga bisa langsung di-**double-click** di Explorer — bila EVSEQ sudah terbuka, project dibuka di jendela yang sedang berjalan (dengan tawaran menyimpan perubahan dulu). Dari command line: `EVSEQ.exe "D:\Show\Wedding.approj"`.
 
 ### 2. Atur output: MAIN untuk audiens, MONITOR untuk operator
 

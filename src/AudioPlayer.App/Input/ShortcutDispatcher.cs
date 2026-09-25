@@ -14,12 +14,29 @@ public sealed class ShortcutDispatcher : IDisposable
     private readonly GlobalHotkeys hotkeys;
     private readonly List<(Gesture Gesture, Action Action)> local = [];
 
+    // Local shortcuts must also work while a panel is floated into its own AvalonDock window, so keys are
+    // caught for every Window and forwarded when they come from the main window or a floating panel
+    // (never from dialogs such as Settings, where typing must stay typing).
+    private static ShortcutDispatcher? active;
+    private static bool classHandlerRegistered;
+
     public ShortcutDispatcher(Window window, MainViewModel vm)
     {
         this.window = window;
         this.vm = vm;
         hotkeys = new GlobalHotkeys(window);
-        window.PreviewKeyDown += OnPreviewKeyDown;
+        active = this;
+        if (!classHandlerRegistered)
+        {
+            EventManager.RegisterClassHandler(typeof(Window), UIElement.PreviewKeyDownEvent, new KeyEventHandler(OnAnyWindowPreviewKeyDown));
+            classHandlerRegistered = true;
+        }
+    }
+
+    private static void OnAnyWindowPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (active is { } d && (ReferenceEquals(sender, d.window) || sender is AvalonDock.Controls.LayoutFloatingWindowControl))
+            d.OnPreviewKeyDown(sender, e);
     }
 
     /// <summary>Re-registers project shortcuts and per-track shortcuts; returns problems found.</summary>
@@ -76,7 +93,7 @@ public sealed class ShortcutDispatcher : IDisposable
 
     public void Dispose()
     {
-        window.PreviewKeyDown -= OnPreviewKeyDown;
+        if (active == this) active = null;
         hotkeys.Dispose();
     }
 

@@ -52,7 +52,7 @@ public class TrackVoiceTests
     {
         using var v = Open(TestAudio.CreateWav(48000, 2, 0.2));
         v.SetRange(TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100));
-        v.Seek(TimeSpan.FromMilliseconds(50));
+        v.Seek(TimeSpan.FromMilliseconds(50), smooth: false); // start position, as the engine does
         Assert.Equal(4800, TestAudio.Read(v, 20000).Length); // 50 ms of stereo
         Assert.InRange(v.Position.TotalMilliseconds, 99, 101);
     }
@@ -73,7 +73,7 @@ public class TrackVoiceTests
     {
         using var v = Open(TestAudio.CreateWav(48000, 2, 0.2));
         v.SetRange(TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(100));
-        v.Seek(TimeSpan.FromMilliseconds(100));
+        v.Seek(TimeSpan.FromMilliseconds(100), smooth: false);
         v.Loop = true;
         Assert.Empty(TestAudio.Read(v, 960));
     }
@@ -129,6 +129,53 @@ public class TrackVoiceTests
         v.Seek(TimeSpan.FromMilliseconds(100));
         TestAudio.Read(v, 9600);                   // restore ramp
         Assert.True(Rms(TestAudio.Read(v, 960)) > 0.3f);
+    }
+
+    /// <summary>1 s at +0.5 then 1 s at -0.5 (mono): a hard jump between halves is a full-scale click.</summary>
+    private static string StepFile()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"ap-step-{Guid.NewGuid():N}.wav");
+        var samples = new float[96000];
+        for (int i = 0; i < samples.Length; i++) samples[i] = i < 48000 ? 0.5f : -0.5f;
+        using (var w = new WaveFileWriter(path, WaveFormat.CreateIeeeFloatWaveFormat(48000, 1)))
+            w.WriteSamples(samples, 0, samples.Length);
+        return path;
+    }
+
+    private static float MaxStep(float[] b)
+    {
+        float max = 0;
+        for (int i = 2; i < b.Length; i += 2) max = Math.Max(max, Math.Abs(b[i] - b[i - 2])); // left channel
+        return max;
+    }
+
+    [Fact]
+    public void SeekWhilePlayingIsDeclicked()
+    {
+        using var v = Open(StepFile());
+        TestAudio.Read(v, 9600);                        // playing the +0.5 half
+        v.Seek(TimeSpan.FromMilliseconds(1500));        // into the -0.5 half
+        var b = TestAudio.Read(v, 4800);                // 50 ms around the jump
+        Assert.True(MaxStep(b) < 0.02f, $"largest sample step {MaxStep(b)} is a click");
+        Assert.Equal(-0.5f, b[^2], 3);                  // arrived at the new position
+    }
+
+    [Fact]
+    public void ImmediateSeekJumpsWithoutRamp()
+    {
+        using var v = Open(StepFile());
+        TestAudio.Read(v, 9600);
+        v.Seek(TimeSpan.FromMilliseconds(1500), smooth: false);
+        Assert.Equal(-0.5f, TestAudio.Read(v, 2)[0], 3);
+    }
+
+    [Fact]
+    public void PendingSeekIsVisibleInPositionRightAway()
+    {
+        using var v = Open(StepFile());
+        TestAudio.Read(v, 9600);
+        v.Seek(TimeSpan.FromMilliseconds(1500));
+        Assert.InRange(v.Position.TotalMilliseconds, 1499, 1501);
     }
 
     [Fact]

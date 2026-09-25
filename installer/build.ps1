@@ -12,7 +12,8 @@ if ($LASTEXITCODE) { exit $LASTEXITCODE }
 # Start from an empty folder so files from older builds never end up in the installer.
 if (Test-Path $publish) { Remove-Item $publish -Recurse -Force }
 [string[]]$versionArgs = if ($Version) { @("-p:Version=$Version") } else { @() }
-dotnet publish "$root\src\AudioPlayer.App" -c Release -r win-x64 --self-contained true -o $publish @versionArgs
+# ReadyToRun: precompiled code, so the first start after a reboot does not wait for the JIT
+dotnet publish "$root\src\AudioPlayer.App" -c Release -r win-x64 --self-contained true -p:PublishReadyToRun=true -o $publish @versionArgs
 if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
 $iscc = @("${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe", "$env:ProgramFiles\Inno Setup 6\ISCC.exe", "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe") |
