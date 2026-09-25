@@ -1,7 +1,8 @@
 <Window x:Class="AudioPlayer.App.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Settings" SizeToContent="WidthAndHeight" ResizeMode="NoResize" WindowStartupLocation="CenterOwner">
+        Title="Settings" SizeToContent="WidthAndHeight" ResizeMode="NoResize" WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Ap.Panel}" Foreground="{StaticResource Ap.Text}">
     <StackPanel Margin="16" Width="520">
         <TextBlock Text="Output device" FontWeight="Bold"/>
         <Grid Margin="0,6,0,14">

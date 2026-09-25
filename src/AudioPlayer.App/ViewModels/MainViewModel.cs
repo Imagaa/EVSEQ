@@ -48,8 +48,82 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] public partial TrackViewModel? Selected { get; set; }
     [ObservableProperty] public partial string Status { get; set; } = "";
     [ObservableProperty] public partial string TotalText { get; set; } = "00:00";
-    [ObservableProperty] public partial bool IsDirty { get; set; }
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(SaveStateText))]
+    public partial bool IsDirty { get; set; }
+
     [ObservableProperty] public partial string? Alert { get; set; }
+
+    // ---- Visual indicators: activity log, save/autosave state, devices ----
+
+    /// <summary>Newest first; every status message, alert, save and autosave lands here.</summary>
+    public ObservableCollection<ActivityEntry> Activity { get; } = [];
+
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(SaveStateText))]
+    public partial DateTime? LastSavedAt { get; set; }
+
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(AutosaveText))]
+    public partial DateTime? LastAutosaveAt { get; set; }
+
+    public string SaveStateText =>
+        IsDirty ? "● Belum disimpan"
+        : LastSavedAt is { } t ? $"✓ Tersimpan {t:HH:mm:ss}"
+        : ProjectPath is null ? "Project baru"
+        : "✓ Tersimpan";
+
+    public string AutosaveText => LastAutosaveAt is { } a ? $"Autosave {a:HH:mm:ss}" : "Autosave aktif (60 dtk)";
+
+    [ObservableProperty] public partial string MainDeviceText { get; set; } = "";
+    [ObservableProperty] public partial bool MainDeviceOk { get; set; }
+    [ObservableProperty] public partial string MonitorDeviceText { get; set; } = "";
+    [ObservableProperty] public partial bool MonitorDeviceOk { get; set; }
+
+    public void Log(string text, ActivityKind kind = ActivityKind.Info)
+    {
+        Activity.Insert(0, new ActivityEntry(DateTime.Now, text, kind));
+        if (Activity.Count > 300) Activity.RemoveAt(Activity.Count - 1);
+    }
+
+    partial void OnStatusChanged(string value)
+    {
+        if (!string.IsNullOrWhiteSpace(value)) Log(value, ActivityKind.Warning);
+    }
+
+    partial void OnAlertChanged(string? value)
+    {
+        if (value is not null) Log(value, ActivityKind.Error);
+    }
+
+    public void NoteSaved(string path)
+    {
+        MarkSaved(path);
+        LastSavedAt = DateTime.Now;
+        Log($"Project disimpan: {Path.GetFileName(path)}", ActivityKind.Success);
+    }
+
+    public void NoteAutosaved()
+    {
+        LastAutosaveAt = DateTime.Now;
+        Log("Autosave (perubahan belum disimpan diamankan)");
+    }
+
+    private void UpdateDeviceInfo()
+    {
+        IReadOnlyList<AudioDevice> devices;
+        try
+        {
+            devices = Devices.RenderDevices();
+        }
+        catch (COMException)
+        {
+            devices = [];
+        }
+        string Name(string? id) => devices.FirstOrDefault(d => d.Id == id)?.Name ?? "?";
+
+        MainDeviceOk = Engine.Main.DeviceId is not null;
+        MainDeviceText = MainDeviceOk ? Name(Engine.Main.DeviceId) : "tidak terhubung";
+        MonitorDeviceOk = Engine.Monitor.DeviceId is not null;
+        MonitorDeviceText = MonitorDeviceOk ? Name(Engine.Monitor.DeviceId) : "belum dipilih";
+    }
 
     public double MainVolumeDb
     {
@@ -172,11 +246,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     partial void OnIsDirtyChanged(bool value) => OnPropertyChanged(nameof(WindowTitle));
 
+    public string ProjectName => ProjectPath is null ? "Tanpa judul" : Path.GetFileNameWithoutExtension(ProjectPath);
+
     public void MarkSaved(string path)
     {
         ProjectPath = path;
         IsDirty = false;
         OnPropertyChanged(nameof(WindowTitle));
+        OnPropertyChanged(nameof(ProjectName));
+        OnPropertyChanged(nameof(SaveStateText));
     }
 
     public void Load(Project project, string? path)
@@ -195,8 +273,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(MainVolumeDb));
         OnPropertyChanged(nameof(MonitorVolumeDb));
         IsDirty = false;
+        LastSavedAt = null;
         OnPropertyChanged(nameof(WindowTitle));
+        OnPropertyChanged(nameof(ProjectName));
+        OnPropertyChanged(nameof(SaveStateText));
         RefreshKeys();
+        Log(path is null ? "Project baru" : $"Project dibuka: {Path.GetFileName(path)}");
     }
 
     public void AddFiles(IEnumerable<string> paths)
@@ -235,6 +317,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         // Monitor never falls back to the default device: preview must not leak to the audience.
         if (Engine.Monitor.DeviceId is null) notes.Add("Device Monitor belum dipilih — buka Settings.");
         Status = string.Join("  ", notes);
+        UpdateDeviceInfo();
     }
 
     /// <summary>Raised when any shortcut source changes (track shortcut edited, tracks added/removed).</summary>
@@ -277,11 +360,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             Engine.Main.AttachDevice(Devices.Default());
             Alert = null;
+            Log("Main dipindah ke device default", ActivityKind.Success);
         }
         catch (COMException ex)
         {
             Alert = $"Gagal membuka device default: {ex.Message}";
         }
+        UpdateDeviceInfo();
     }
 
     [RelayCommand] private void DismissAlert() => Alert = null;
@@ -300,6 +385,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Alert = bus == BusKind.Main
             ? $"⚠ Output MAIN terputus ({reason}). Tekan 'Pakai device default' atau pilih device di Settings."
             : $"⚠ Output MONITOR terputus ({reason}). Pilih device baru di Settings.";
+        UpdateDeviceInfo();
     }
 
     [RelayCommand]

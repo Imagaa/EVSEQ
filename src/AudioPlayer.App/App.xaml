@@ -1,4 +1,59 @@
 <Application x:Class="AudioPlayer.App.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Built-in WPF Fluent theme, dark variant: styles every standard control -->
+                <ResourceDictionary Source="pack://application:,,,/PresentationFramework.Fluent;component/Themes/Fluent.Dark.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- App palette (matches the AvalonDock VS2013 dark chrome) -->
+            <SolidColorBrush x:Key="Ap.Bg" Color="#1E1E1E"/>
+            <SolidColorBrush x:Key="Ap.Panel" Color="#252526"/>
+            <SolidColorBrush x:Key="Ap.PanelAlt" Color="#2D2D30"/>
+            <SolidColorBrush x:Key="Ap.Line" Color="#3F3F46"/>
+            <SolidColorBrush x:Key="Ap.Text" Color="#ECECEF"/>
+            <SolidColorBrush x:Key="Ap.SubText" Color="#9C9CA6"/>
+            <SolidColorBrush x:Key="Ap.Main" Color="#E5484D"/>
+            <SolidColorBrush x:Key="Ap.Cue" Color="#3B8EEA"/>
+            <SolidColorBrush x:Key="Ap.Ok" Color="#3FB950"/>
+            <SolidColorBrush x:Key="Ap.Warn" Color="#D29922"/>
+            <SolidColorBrush x:Key="Ap.Err" Color="#F85149"/>
+            <SolidColorBrush x:Key="Ap.RowPlaying" Color="#1F3D2A"/>
+            <SolidColorBrush x:Key="Ap.RowPaused" Color="#3D3419"/>
+
+            <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+
+            <!-- Small colored label: MAIN / CUE / MONITOR -->
+            <Style x:Key="Ap.Chip" TargetType="Border">
+                <Setter Property="CornerRadius" Value="4"/>
+                <Setter Property="Padding" Value="8,2"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+            </Style>
+            <Style x:Key="Ap.ChipText" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="FontSize" Value="12"/>
+            </Style>
+            <Style x:Key="Ap.Caption" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{StaticResource Ap.SubText}"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+            </Style>
+            <!-- Buttons that must never steal keyboard focus from the track list -->
+            <Style x:Key="Ap.ToolButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                <Setter Property="Focusable" Value="False"/>
+                <Setter Property="Margin" Value="0,0,6,0"/>
+                <Setter Property="Padding" Value="12,5"/>
+            </Style>
+            <Style x:Key="Ap.Danger" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                <Setter Property="Focusable" Value="False"/>
+                <Setter Property="Background" Value="#C62828"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="FontSize" Value="16"/>
+                <Setter Property="Padding" Value="22,6"/>
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
 </Application>

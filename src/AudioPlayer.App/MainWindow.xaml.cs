@@ -8,6 +8,8 @@ using AudioPlayer.App.Input;
 using AudioPlayer.App.ViewModels;
 using AudioPlayer.Core.Audio;
 using AudioPlayer.Core.Model;
+using AvalonDock.Layout;
+using AvalonDock.Serializer.Xml;
 using Microsoft.Win32;
 
 namespace AudioPlayer.App;
@@ -23,15 +25,25 @@ public partial class MainWindow : Window
     private readonly SessionRecovery recovery = new(AppDataDir);
     private readonly RecentProjects recent = new(Path.Combine(AppDataDir, "recent.json"));
     private readonly DispatcherTimer autosave = new() { Interval = TimeSpan.FromSeconds(60) };
+    private static readonly string LayoutPath = Path.Combine(AppDataDir, "layout.xml");
     private ShortcutDispatcher? shortcuts;
+    private Dictionary<string, object>? panels; // ContentId -> panel content, reused across layout loads
+    private string? defaultLayout;
 
     public MainWindow()
     {
         InitializeComponent();
         DataContext = vm;
+        // Panels may be floated into their own windows, so they get the view model directly
+        // instead of inheriting it from this window.
+        foreach (var p in new FrameworkElement[] { TracksPanel, MasterPanel, MainPanel, CuePanel, ActivityPanel })
+            p.DataContext = vm;
         vm.ShortcutsChanged += () => { if (shortcuts is not null) ReloadShortcuts(); };
         Loaded += (_, _) =>
         {
+            panels = Dock.Layout.Descendents().OfType<LayoutAnchorable>().ToDictionary(a => a.ContentId, a => a.Content);
+            defaultLayout = SerializeLayout();
+            RestoreSavedLayout();
             OfferRecovery();
             recovery.BeginSession();
             autosave.Tick += (_, _) => Autosave();
@@ -45,11 +57,70 @@ public partial class MainWindow : Window
         Closing += (_, e) => { if (!ConfirmDiscard()) e.Cancel = true; };
         Closed += (_, _) =>
         {
+            SaveLayout();
             autosave.Stop();
             recovery.EndSession();
             shortcuts?.Dispose();
             vm.Dispose();
         };
+    }
+
+    // ---- Dock layout: remembered between runs, with a reset to the built-in default ----
+
+    private string SerializeLayout()
+    {
+        using var w = new StringWriter();
+        new XmlLayoutSerializer(Dock).Serialize(w);
+        return w.ToString();
+    }
+
+    /// <summary>Loads a layout, re-attaching the existing panel contents. Throws if a panel would go missing.</summary>
+    private void LoadLayout(string xml)
+    {
+        foreach (var a in Dock.Layout.Descendents().OfType<LayoutAnchorable>().ToList()) a.Content = null;
+        var serializer = new XmlLayoutSerializer(Dock);
+        serializer.LayoutSerializationCallback += (_, e) =>
+        {
+            if (e.Model.ContentId is { } id && panels!.TryGetValue(id, out var content)) e.Content = content;
+            else e.Cancel = true;
+        };
+        using (var r = new StringReader(xml)) serializer.Deserialize(r);
+
+        var loaded = Dock.Layout.Descendents().OfType<LayoutAnchorable>().Select(a => a.ContentId).ToHashSet();
+        if (!panels!.Keys.All(loaded.Contains)) throw new InvalidDataException("Layout tidak lengkap.");
+    }
+
+    private void RestoreSavedLayout()
+    {
+        if (!File.Exists(LayoutPath)) return;
+        try
+        {
+            LoadLayout(File.ReadAllText(LayoutPath));
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or InvalidOperationException or System.Xml.XmlException)
+        {
+            LoadLayout(defaultLayout!); // a broken or outdated layout must never hide a panel
+            vm.Log("Layout tersimpan tidak valid, memakai layout default", ActivityKind.Warning);
+        }
+    }
+
+    private void SaveLayout()
+    {
+        try
+        {
+            Directory.CreateDirectory(AppDataDir);
+            File.WriteAllText(LayoutPath, SerializeLayout());
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // losing the layout only means starting from the default next time
+        }
+    }
+
+    private void ResetLayout_Click(object sender, RoutedEventArgs e)
+    {
+        LoadLayout(defaultLayout!);
+        vm.Log("Layout panel dikembalikan ke default");
     }
 
     // While the thumb is dragged the bar stops following playback; the seek happens on release.
@@ -198,7 +269,6 @@ public partial class MainWindow : Window
 
     private void Save_Executed(object sender, ExecutedRoutedEventArgs e) => Save();
     private void SaveAs_Executed(object sender, ExecutedRoutedEventArgs e) => SaveAs();
-    private void Exit_Click(object sender, RoutedEventArgs e) => Close();
 
     private bool Save() => vm.ProjectPath is null ? SaveAs() : SaveTo(vm.ProjectPath);
 
@@ -213,7 +283,7 @@ public partial class MainWindow : Window
         try
         {
             ProjectSerializer.Save(vm.Project, path);
-            vm.MarkSaved(path);
+            vm.NoteSaved(path);
             recovery.DiscardAutosave();
             RememberRecent(path);
             return true;
@@ -237,7 +307,11 @@ public partial class MainWindow : Window
     {
         try
         {
-            if (vm.IsDirty) recovery.Save(vm.Project, vm.ProjectPath);
+            if (vm.IsDirty)
+            {
+                recovery.Save(vm.Project, vm.ProjectPath);
+                vm.NoteAutosaved();
+            }
             else recovery.DiscardAutosave();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
