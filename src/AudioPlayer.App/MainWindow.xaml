@@ -402,7 +402,7 @@
                                         <DockPanel Margin="0,6,0,4">
                                             <TextBlock DockPanel.Dock="Left" Text="{Binding MainBar.ElapsedText}" Style="{StaticResource Ap.Caption}" Width="48" Margin="0,12,0,0"/>
                                             <c:SeekBarView Accent="{StaticResource Ap.Main}" Height="52"
-                                                           Duration="{Binding MainBar.Duration}" Position="{Binding MainBar.Position}" IsScrubbing="{Binding MainBar.IsDragging}"
+                                                           Duration="{Binding MainBar.Duration}" Position="{Binding MainBar.Position}" IsScrubbing="{Binding MainBar.IsDragging}" IsEditingRange="{Binding MainBar.IsEditingRange}"
                                                            IsEnabled="{Binding MainBar.HasTrack}" RangeStart="{Binding MainBar.RangeStart}" RangeEnd="{Binding MainBar.RangeEnd}"
                                                            FadeIn="{Binding MainBar.FadeIn}" FadeOut="{Binding MainBar.FadeOut}" ShowFadeOut="{Binding MainBar.ShowFadeOut}"
                                                            Curve="{Binding MainBar.Curve}" ToolTip="Klik/geser untuk pindah posisi di Main"/>
@@ -438,7 +438,7 @@
                                         <DockPanel Margin="0,6,0,4">
                                             <TextBlock DockPanel.Dock="Left" Text="{Binding CueBar.ElapsedText}" Style="{StaticResource Ap.Caption}" Width="48" Margin="0,12,0,0"/>
                                             <c:SeekBarView Accent="{StaticResource Ap.Cue}" Height="52"
-                                                           Duration="{Binding CueBar.Duration}" Position="{Binding CueBar.Position}" IsScrubbing="{Binding CueBar.IsDragging}"
+                                                           Duration="{Binding CueBar.Duration}" Position="{Binding CueBar.Position}" IsScrubbing="{Binding CueBar.IsDragging}" IsEditingRange="{Binding CueBar.IsEditingRange}"
                                                            IsEnabled="{Binding CueBar.HasTrack}" RangeStart="{Binding CueBar.RangeStart}" RangeEnd="{Binding CueBar.RangeEnd}"
                                                            FadeIn="{Binding CueBar.FadeIn}" FadeOut="{Binding CueBar.FadeOut}" ShowFadeOut="{Binding CueBar.ShowFadeOut}"
                                                            Curve="{Binding CueBar.Curve}" ToolTip="Klik/geser untuk pindah posisi preview atau memilih titik start/end"/>

@@ -18,8 +18,12 @@ public sealed class SeekBarView : FrameworkElement
     public static readonly DependencyProperty DurationProperty = DependencyProperty.Register(nameof(Duration), typeof(double), typeof(SeekBarView), Render(1));
     public static readonly DependencyProperty PositionProperty = DependencyProperty.Register(nameof(Position), typeof(double), typeof(SeekBarView),
         new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsRender | FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
-    public static readonly DependencyProperty RangeStartProperty = DependencyProperty.Register(nameof(RangeStart), typeof(double), typeof(SeekBarView), Render(0));
-    public static readonly DependencyProperty RangeEndProperty = DependencyProperty.Register(nameof(RangeEnd), typeof(double), typeof(SeekBarView), Render(0));
+    public static readonly DependencyProperty RangeStartProperty = DependencyProperty.Register(nameof(RangeStart), typeof(double), typeof(SeekBarView),
+        new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsRender | FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+    public static readonly DependencyProperty RangeEndProperty = DependencyProperty.Register(nameof(RangeEnd), typeof(double), typeof(SeekBarView),
+        new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsRender | FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+    public static readonly DependencyProperty IsEditingRangeProperty = DependencyProperty.Register(nameof(IsEditingRange), typeof(bool), typeof(SeekBarView),
+        new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
     public static readonly DependencyProperty FadeInProperty = DependencyProperty.Register(nameof(FadeIn), typeof(double), typeof(SeekBarView), Render(0));
     public static readonly DependencyProperty FadeOutProperty = DependencyProperty.Register(nameof(FadeOut), typeof(double), typeof(SeekBarView), Render(0));
     public static readonly DependencyProperty ShowFadeOutProperty = DependencyProperty.Register(nameof(ShowFadeOut), typeof(bool), typeof(SeekBarView),
@@ -44,6 +48,15 @@ public sealed class SeekBarView : FrameworkElement
     /// <summary>True while the user drags; the view model seeks once when it turns false.</summary>
     public bool IsScrubbing { get => (bool)GetValue(IsScrubbingProperty); set => SetValue(IsScrubbingProperty, value); }
 
+    /// <summary>True while a start/end marker is dragged; the view model saves the range when it turns false.</summary>
+    public bool IsEditingRange { get => (bool)GetValue(IsEditingRangeProperty); set => SetValue(IsEditingRangeProperty, value); }
+
+    private enum Drag { None, Playhead, Start, End }
+
+    private const double GrabDistance = 7;   // px around a marker that grabs it
+    private const double MinRange = 0.1;     // seconds between start and end
+
+    private Drag drag;
     private double? hoverX;
 
     private static readonly Brush Groove = Frozen(Color.FromRgb(0x17, 0x17, 0x1B));
@@ -141,36 +154,58 @@ public sealed class SeekBarView : FrameworkElement
         return g;
     }
 
+    /// <summary>Marker line with grab handles (flag on top, tab at the bottom).</summary>
     private static void DrawMarker(DrawingContext dc, double x, double top, double bottom, bool pointsRight)
     {
         dc.DrawLine(MarkerPen, new Point(x, top), new Point(x, bottom));
-        double d = pointsRight ? 7 : -7;
+        double d = pointsRight ? 9 : -9;
         var flag = new StreamGeometry();
         using (var c = flag.Open())
         {
             c.BeginFigure(new Point(x, top), true, true);
             c.LineTo(new Point(x + d, top), true, false);
-            c.LineTo(new Point(x, top + 7), true, false);
+            c.LineTo(new Point(x + d, top + 6), true, false);
+            c.LineTo(new Point(x, top + 10), true, false);
+
+            c.BeginFigure(new Point(x, bottom), true, true);
+            c.LineTo(new Point(x + d * 0.7, bottom), true, false);
+            c.LineTo(new Point(x, bottom - 7), true, false);
         }
         flag.Freeze();
         dc.DrawGeometry(MarkerBrush, null, flag);
     }
 
-    // ---- mouse: click/drag to seek ----
+    // ---- mouse: drag a start/end marker, otherwise click/drag to seek ----
+
+    private double ToX(double seconds) => Math.Clamp(seconds / Duration, 0, 1) * ActualWidth;
+    private double ToSeconds(double x) => Math.Clamp(x / ActualWidth, 0, 1) * Duration;
+    private double StartSec => Math.Clamp(RangeStart, 0, Duration);
+    private double EndSec => RangeEnd <= StartSec ? Duration : Math.Min(RangeEnd, Duration);
+
+    private Drag HitTest(double x)
+    {
+        double ds = Math.Abs(x - ToX(StartSec)), de = Math.Abs(x - ToX(EndSec)), dp = Math.Abs(x - ToX(Position));
+        if (Math.Min(ds, de) > GrabDistance || dp < Math.Min(ds, de)) return Drag.Playhead;
+        return ds <= de ? Drag.Start : Drag.End; // nearest marker wins when they are close together
+    }
 
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
     {
-        if (!IsEnabled || Duration <= 0) return;
+        if (!IsEnabled || Duration <= 0 || ActualWidth <= 0) return;
+        double x = e.GetPosition(this).X;
+        drag = HitTest(x);
         CaptureMouse();
-        IsScrubbing = true;
-        SeekTo(e.GetPosition(this).X);
+        if (drag == Drag.Playhead) IsScrubbing = true;
+        else IsEditingRange = true;
+        DragTo(x);
         e.Handled = true;
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
         hoverX = Math.Clamp(e.GetPosition(this).X, 0, ActualWidth);
-        if (IsMouseCaptured) SeekTo(hoverX.Value);
+        if (IsMouseCaptured) DragTo(hoverX.Value);
+        else if (IsEnabled && Duration > 0) Cursor = HitTest(hoverX.Value) == Drag.Playhead ? Cursors.Hand : Cursors.SizeWE;
         InvalidateVisual();
     }
 
@@ -183,20 +218,33 @@ public sealed class SeekBarView : FrameworkElement
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
     {
         if (!IsMouseCaptured) return;
-        SeekTo(e.GetPosition(this).X);
-        ReleaseMouseCapture(); // OnLostMouseCapture ends the scrub
+        DragTo(e.GetPosition(this).X);
+        ReleaseMouseCapture(); // OnLostMouseCapture finishes the drag
         e.Handled = true;
     }
 
     protected override void OnLostMouseCapture(MouseEventArgs e)
     {
         if (IsScrubbing) IsScrubbing = false;
+        if (IsEditingRange) IsEditingRange = false;
+        drag = Drag.None;
     }
 
-    private void SeekTo(double x)
+    private void DragTo(double x)
     {
-        if (ActualWidth <= 0) return;
-        SetCurrentValue(PositionProperty, Math.Clamp(x / ActualWidth, 0, 1) * Duration);
+        double s = ToSeconds(x);
+        switch (drag)
+        {
+            case Drag.Playhead:
+                SetCurrentValue(PositionProperty, s);
+                break;
+            case Drag.Start:
+                SetCurrentValue(RangeStartProperty, Math.Min(s, EndSec - MinRange));
+                break;
+            case Drag.End:
+                SetCurrentValue(RangeEndProperty, Math.Max(s, StartSec + MinRange));
+                break;
+        }
     }
 
     private static string Fmt(double seconds) => TimeSpan.FromSeconds(Math.Max(0, seconds)).ToString(@"mm\:ss\.f");
