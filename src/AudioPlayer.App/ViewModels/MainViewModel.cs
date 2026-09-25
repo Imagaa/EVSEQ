@@ -274,7 +274,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     public string WindowTitle =>
-        $"{(ProjectPath is null ? "Tanpa judul" : Path.GetFileNameWithoutExtension(ProjectPath))}{(IsDirty ? " *" : "")} — Audio Player";
+        $"{(ProjectPath is null ? "Tanpa judul" : Path.GetFileNameWithoutExtension(ProjectPath))}{(IsDirty ? " *" : "")} — EVSEQ";
 
     partial void OnIsDirtyChanged(bool value) => OnPropertyChanged(nameof(WindowTitle));
 

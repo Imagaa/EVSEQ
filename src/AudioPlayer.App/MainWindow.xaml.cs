@@ -16,10 +16,29 @@ namespace AudioPlayer.App;
 
 public partial class MainWindow : Window
 {
-    private const string ProjectFilter = "Project Audio Player (*.approj)|*.approj";
+    private const string ProjectFilter = "Project EVSEQ (*.approj)|*.approj";
 
-    private static readonly string AppDataDir =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AudioPlayer");
+    private static readonly string AppDataDir = MigrateAppDataDir();
+
+    /// <summary>
+    /// %LOCALAPPDATA%\EVSEQ. Data from before the rename (\AudioPlayer: recent list, layout, autosave)
+    /// is moved over once so nothing is lost.
+    /// </summary>
+    private static string MigrateAppDataDir()
+    {
+        var root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        string dir = Path.Combine(root, "EVSEQ"), old = Path.Combine(root, "AudioPlayer");
+        if (Directory.Exists(dir) || !Directory.Exists(old)) return dir;
+        try
+        {
+            Directory.Move(old, dir);
+            return dir;
+        }
+        catch (IOException)
+        {
+            return old; // folder in use; keep using it rather than start empty
+        }
+    }
 
     private readonly MainViewModel vm = new();
     private readonly SessionRecovery recovery = new(AppDataDir);
@@ -316,7 +335,7 @@ public partial class MainWindow : Window
     private bool ConfirmDiscard()
     {
         if (!vm.IsDirty) return true;
-        var r = MessageBox.Show(this, "Simpan perubahan project?", "Audio Player", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+        var r = MessageBox.Show(this, "Simpan perubahan project?", "EVSEQ", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
         return r == MessageBoxResult.No || (r == MessageBoxResult.Yes && Save());
     }
 

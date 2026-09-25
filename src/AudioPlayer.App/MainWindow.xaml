@@ -289,7 +289,9 @@
                                     <Border Background="{StaticResource Ap.Bg}" Visibility="{Binding ShowWelcome, Converter={StaticResource BoolToVisibility}}">
                                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                                         <StackPanel MaxWidth="620" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                            <TextBlock Text="Audio Player" FontSize="32" FontWeight="SemiBold"/>
+                                            <TextBlock FontSize="32" FontWeight="SemiBold">
+                                                <Run Text="Event Sequencer"/><Run Text="  EVSEQ" FontSize="16" Foreground="{StaticResource Ap.SubText}"/>
+                                            </TextBlock>
                                             <TextBlock Text="Mulai dengan menambahkan track, atau buka project yang sudah disimpan."
                                                        Style="{StaticResource Ap.Caption}" Margin="0,4,0,22" TextWrapping="Wrap"/>
                                             <WrapPanel Margin="0,0,0,28">

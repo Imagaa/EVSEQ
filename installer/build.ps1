@@ -12,5 +12,5 @@ $iscc = @("${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe", "$env:LOCALAPPDATA\P
     Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $iscc) { throw "ISCC.exe not found. Install: winget install --id JRSoftware.InnoSetup -e" }
 
-& $iscc "$PSScriptRoot\AudioPlayer.iss"
+& $iscc "$PSScriptRoot\EVSEQ.iss"
 if ($LASTEXITCODE) { exit $LASTEXITCODE }

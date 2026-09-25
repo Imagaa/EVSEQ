@@ -12,7 +12,7 @@ public partial class App : Application
         singleInstance = new Mutex(initiallyOwned: true, @"Local\AudioPlayer.SingleInstance", out bool isFirst);
         if (!isFirst)
         {
-            MessageBox.Show("Audio Player sudah berjalan.", "Audio Player", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("EVSEQ sudah berjalan.", "Event Sequencer", MessageBoxButton.OK, MessageBoxImage.Information);
             Shutdown();
             return;
         }
