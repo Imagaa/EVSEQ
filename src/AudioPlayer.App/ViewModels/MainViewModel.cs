@@ -19,6 +19,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         Engine = new PlayerEngine(new OutputBus(), new OutputBus());
         MainBar = new SeekBarViewModel(Engine, BusKind.Main);
+        Midi = new MidiViewModel(this);
         CueBar = new SeekBarViewModel(Engine, BusKind.Monitor);
         Devices.DeviceUnavailable += id =>
             Application.Current.Dispatcher.InvokeAsync(() => OnDeviceUnavailable(id));
@@ -38,6 +39,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public PlayerEngine Engine { get; }
     public SeekBarViewModel MainBar { get; }
+    public MidiViewModel Midi { get; }
     public SeekBarViewModel CueBar { get; }
     public AudioDevices Devices { get; } = new();
     public Project Project { get; private set; } = new();
@@ -309,6 +311,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(SaveStateText));
         RefreshKeys();
         Log(path is null ? "Project baru" : $"Project dibuka: {Path.GetFileName(path)}");
+        Midi.ProjectLoaded();
     }
 
     public void AddFiles(IEnumerable<string> paths)
@@ -408,6 +411,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public void NotifyShortcutsChanged() => ShortcutsChanged?.Invoke();
 
+    /// <summary>Moves the selection up/down the list (MIDI navigation buttons).</summary>
+    public void SelectRelative(int delta)
+    {
+        if (Tracks.Count == 0) return;
+        int i = Selected is null ? (delta > 0 ? -1 : Tracks.Count) : Tracks.IndexOf(Selected);
+        Selected = Tracks[Math.Clamp(i + delta, 0, Tracks.Count - 1)];
+    }
+
     public void PlayNumber(int number)
     {
         if (number >= 1 && number <= Tracks.Count) PlayTrack(Tracks[number - 1]);
@@ -506,6 +517,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         timer.Stop();
+        Midi.Dispose();
         Engine.Dispose();
         Engine.Main.Dispose();
         Engine.Monitor.Dispose();

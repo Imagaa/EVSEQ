@@ -503,6 +503,69 @@
                                     </ListBox.ItemTemplate>
                                 </ListBox>
                             </ad:LayoutAnchorable>
+                            <ad:LayoutAnchorable Title="MIDI" ContentId="midi" CanClose="False" CanHide="False">
+                                <!-- ===== MIDI controller: port, live monitor, MIDI learn ===== -->
+                                <DockPanel x:Name="MidiPanel" Background="{StaticResource Ap.Bg}">
+                                    <StackPanel DockPanel.Dock="Top" Margin="10,8,10,6">
+                                        <TextBlock Text="Input MIDI" FontWeight="SemiBold" Margin="0,0,0,3"/>
+                                        <DockPanel>
+                                            <Ellipse DockPanel.Dock="Left" Width="9" Height="9" Margin="0,0,8,0" VerticalAlignment="Center">
+                                                <Ellipse.Style>
+                                                    <Style TargetType="Ellipse">
+                                                        <Setter Property="Fill" Value="{StaticResource Ap.SubText}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                                                <Setter Property="Fill" Value="{StaticResource Ap.Ok}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Ellipse.Style>
+                                            </Ellipse>
+                                            <ComboBox ItemsSource="{Binding Ports}" SelectedItem="{Binding SelectedPort}" DropDownOpened="MidiPorts_DropDownOpened"
+                                                      Focusable="False" HorizontalAlignment="Stretch" ToolTip="Controller MIDI yang dipakai"/>
+                                        </DockPanel>
+                                        <TextBlock Style="{StaticResource Ap.Caption}" Margin="0,6,0,0" TextTrimming="CharacterEllipsis">
+                                            <Run Text="Pesan terakhir: "/><Run Text="{Binding LastMessage, Mode=OneWay}" Foreground="{StaticResource Ap.Text}"/>
+                                        </TextBlock>
+                                        <TextBlock Style="{StaticResource Ap.Caption}" Margin="0,4,0,0" TextWrapping="Wrap"
+                                                   Text="Klik Learn lalu tekan tombol / geser fader di controller. StreamDeck: pakai aksi Hotkey ke shortcut Global (Settings)."/>
+                                    </StackPanel>
+                                    <ListBox ItemsSource="{Binding Rows}" Background="Transparent" BorderThickness="0" Focusable="False"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                        <ListBox.ItemContainerStyle>
+                                            <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                                                <Setter Property="Focusable" Value="False"/>
+                                                <Setter Property="Padding" Value="8,2"/>
+                                                <Setter Property="MinHeight" Value="0"/>
+                                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                            </Style>
+                                        </ListBox.ItemContainerStyle>
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <DockPanel>
+                                                    <Button DockPanel.Dock="Right" Content="✕" Command="{Binding ClearCommand}" Style="{StaticResource ResetButton}"
+                                                            ToolTip="Hapus assignment"/>
+                                                    <Button DockPanel.Dock="Right" Content="{Binding LearnLabel}" Command="{Binding LearnCommand}" Focusable="False"
+                                                            MinWidth="84" Padding="8,2" Margin="6,0,0,0">
+                                                        <Button.Style>
+                                                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsLearning}" Value="True">
+                                                                        <Setter Property="Background" Value="{StaticResource Ap.Cue}"/>
+                                                                        <Setter Property="Foreground" Value="White"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Button.Style>
+                                                    </Button>
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding AssignmentText}" Style="{StaticResource Ap.Caption}" Width="96" Margin="6,0,0,0"/>
+                                                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                </DockPanel>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </DockPanel>
+                            </ad:LayoutAnchorable>
                         </ad:LayoutAnchorablePane>
                     </ad:LayoutPanel>
                 </ad:LayoutPanel>

@@ -10,4 +10,9 @@ public sealed class Project
     public FadeSettings DefaultFade { get; set; } = new();
     public List<Track> Tracks { get; set; } = [];
     public List<ShortcutBinding> Shortcuts { get; set; } = DefaultShortcuts.Create();
+
+    /// <summary>MIDI input port, matched by name (port indexes change when devices are replugged).</summary>
+    public string? MidiInputName { get; set; }
+
+    public List<Midi.MidiBinding> MidiBindings { get; set; } = [];
 }

@@ -27,7 +27,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer autosave = new() { Interval = TimeSpan.FromSeconds(60) };
     private static readonly string LayoutPath = Path.Combine(AppDataDir, "layout.xml");
     private ShortcutDispatcher? shortcuts;
-    private Dictionary<string, object>? panels; // ContentId -> panel content, reused across layout loads
+    private Dictionary<string, (string Title, object Content)>? panels; // ContentId -> panel, reused across layout loads
     private string? defaultLayout;
 
     public MainWindow()
@@ -38,10 +38,11 @@ public partial class MainWindow : Window
         // instead of inheriting it from this window.
         foreach (var p in new FrameworkElement[] { TracksPanel, MasterPanel, MainPanel, CuePanel, ActivityPanel })
             p.DataContext = vm;
+        MidiPanel.DataContext = vm.Midi;
         vm.ShortcutsChanged += () => { if (shortcuts is not null) ReloadShortcuts(); };
         Loaded += (_, _) =>
         {
-            panels = Dock.Layout.Descendents().OfType<LayoutAnchorable>().ToDictionary(a => a.ContentId, a => a.Content);
+            panels = Dock.Layout.Descendents().OfType<LayoutAnchorable>().ToDictionary(a => a.ContentId, a => (a.Title, a.Content));
             defaultLayout = SerializeLayout();
             RestoreSavedLayout();
             OfferRecovery();
@@ -74,20 +75,37 @@ public partial class MainWindow : Window
         return w.ToString();
     }
 
-    /// <summary>Loads a layout, re-attaching the existing panel contents. Throws if a panel would go missing.</summary>
+    /// <summary>
+    /// Loads a layout, re-attaching the existing panel contents. Panels the layout does not know
+    /// (added in a newer version) are docked next to the Activity panel, so none is ever lost.
+    /// </summary>
     private void LoadLayout(string xml)
     {
         foreach (var a in Dock.Layout.Descendents().OfType<LayoutAnchorable>().ToList()) a.Content = null;
         var serializer = new XmlLayoutSerializer(Dock);
         serializer.LayoutSerializationCallback += (_, e) =>
         {
-            if (e.Model.ContentId is { } id && panels!.TryGetValue(id, out var content)) e.Content = content;
+            if (e.Model.ContentId is { } id && panels!.TryGetValue(id, out var panel)) e.Content = panel.Content;
             else e.Cancel = true;
         };
         using (var r = new StringReader(xml)) serializer.Deserialize(r);
 
-        var loaded = Dock.Layout.Descendents().OfType<LayoutAnchorable>().Select(a => a.ContentId).ToHashSet();
-        if (!panels!.Keys.All(loaded.Contains)) throw new InvalidDataException("Layout tidak lengkap.");
+        var anchorables = Dock.Layout.Descendents().OfType<LayoutAnchorable>().ToList();
+        var loaded = anchorables.Select(a => a.ContentId).ToHashSet();
+        var activityParent = anchorables.FirstOrDefault(a => a.ContentId == "activity")?.Parent;
+        foreach (var (id, panel) in panels!.Where(p => !loaded.Contains(p.Key)))
+        {
+            var added = new LayoutAnchorable { ContentId = id, Title = panel.Title, Content = panel.Content, CanClose = false, CanHide = false };
+            switch (activityParent)
+            {
+                case LayoutAnchorablePane pane: pane.Children.Add(added); break;   // docked: new tab beside Activity
+                case LayoutAnchorGroup side: side.Children.Add(added); break;      // auto-hidden: same edge as Activity
+                default:
+                    (Dock.Layout.Descendents().OfType<LayoutAnchorablePane>().FirstOrDefault()
+                     ?? throw new InvalidDataException("Layout tanpa panel.")).Children.Add(added);
+                    break;
+            }
+        }
     }
 
     private void RestoreSavedLayout()
@@ -123,8 +141,10 @@ public partial class MainWindow : Window
         vm.Log("Layout panel dikembalikan ke default");
     }
 
-    // Newly plugged interfaces show up without restarting.
+    // Newly plugged interfaces/controllers show up without restarting.
     private void Outputs_DropDownOpened(object? sender, EventArgs e) => vm.RefreshOutputDevices();
+
+    private void MidiPorts_DropDownOpened(object? sender, EventArgs e) => vm.Midi.RefreshPorts();
 
     /// <summary>
     /// Records the pressed key combination into a shortcut box. Works for any box whose Text binding
