@@ -22,7 +22,7 @@ Dua jalur output terpisah: **MAIN** untuk audiens dan **MONITOR** untuk operator
 - **Auto fader**: fade-in/fade-out per track atau default global, kurva linear / equal-power, fade otomatis menjelang end point.
 - **Start/end point** per track, bisa di-drag langsung di seek bar.
 - **Seek bar dengan waveform** yang dibentuk oleh kurva fade, penanda start/end, dan label waktu saat hover.
-- **Fader** per track dan master MAIN/MONITOR bergaya mixing console.
+- **Fader** per track dan master MAIN/MONITOR bergaya mixing console, dengan **peak meter** stereo (peak hold + lampu clip) di tiap output.
 - **Shortcut** lokal & global (jalan walau jendela tidak fokus), per track dan untuk transport MAIN/CUE; **PANIC** menghentikan semua seketika.
 - **MIDI controller** dengan MIDI learn; **StreamDeck** lewat aksi Hotkey ke shortcut global.
 - **Project** (`.approj`, JSON) dengan autosave, pemulihan setelah crash, dan daftar project terakhir.
@@ -57,6 +57,8 @@ Di panel **Master** (kanan):
 - **Output MAIN** — device yang terhubung ke sound system.
 - **Output MONITOR** — headphone/speaker operator untuk cue.
 - Dua fader master untuk volume keseluruhan tiap jalur.
+- **Peak meter** L/R di samping tiap fader, mengukur level yang benar-benar keluar ke device (setelah master fader): hijau, kuning di atas −18 dB, merah di atas −6 dB. Garis putih menahan puncak terakhir; angka *peak* di bawahnya menunjukkan nilainya dalam dBFS.
+- **Lampu CLIP** di atas meter menyala merah bila sinyal menyentuh 0 dBFS dan tetap menyala sampai diklik — tanda untuk menurunkan volume. Kejadiannya juga tercatat di panel Aktivitas.
 
 Mengganti satu output tidak memutus output yang lain, jadi aman dilakukan saat live. Monitor sengaja **tidak pernah** berpindah otomatis ke device default, supaya preview tidak bocor ke audiens. Bila sebuah device dicabut saat berjalan, muncul banner merah dan catatan di panel **Aktivitas**.
 

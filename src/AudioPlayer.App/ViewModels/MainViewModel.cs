@@ -14,6 +14,9 @@ namespace AudioPlayer.App.ViewModels;
 public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(100) };
+    // Meters need smoother motion than the rest of the UI.
+    private readonly DispatcherTimer meterTimer = new(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(33) };
+    private readonly System.Diagnostics.Stopwatch meterClock = System.Diagnostics.Stopwatch.StartNew();
 
     public MainViewModel()
     {
@@ -35,11 +38,27 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Load(new Project(), null);
         timer.Tick += (_, _) => Tick();
         timer.Start();
+        meterTimer.Tick += (_, _) => MeterTick();
+        meterTimer.Start();
     }
 
     public PlayerEngine Engine { get; }
     public SeekBarViewModel MainBar { get; }
     public MidiViewModel Midi { get; }
+
+    /// <summary>Output level of each bus, measured after the master fader.</summary>
+    public MeterViewModel MainMeter { get; } = new();
+    public MeterViewModel MonitorMeter { get; } = new();
+
+    private void MeterTick()
+    {
+        double dt = meterClock.Elapsed.TotalSeconds;
+        meterClock.Restart();
+        if (MainMeter.Update(Engine.Main.TakePeaks(), dt))
+            Log("MAIN clipping (0 dBFS) — turunkan volume track atau master MAIN", ActivityKind.Warning);
+        if (MonitorMeter.Update(Engine.Monitor.TakePeaks(), dt))
+            Log("MONITOR clipping (0 dBFS) — turunkan volume track atau master MONITOR", ActivityKind.Warning);
+    }
     public SeekBarViewModel CueBar { get; }
     public AudioDevices Devices { get; } = new();
     public Project Project { get; private set; } = new();
@@ -517,6 +536,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         timer.Stop();
+        meterTimer.Stop();
         Midi.Dispose();
         Engine.Dispose();
         Engine.Main.Dispose();

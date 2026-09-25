@@ -375,19 +375,35 @@
                                                 <Border DockPanel.Dock="Top" Style="{StaticResource Ap.Chip}" Background="{StaticResource Ap.Main}" HorizontalAlignment="Center">
                                                     <TextBlock Text="MAIN" Style="{StaticResource Ap.ChipText}"/>
                                                 </Border>
-                                                <TextBlock DockPanel.Dock="Bottom" Text="{Binding MainVolumeDb, StringFormat={}{0:0.0} dB}" HorizontalAlignment="Center"
-                                                           FontWeight="SemiBold" Margin="0,6,0,0"/>
-                                                <Slider Style="{StaticResource Ap.FaderV}" Value="{Binding MainVolumeDb}" Foreground="{StaticResource Ap.Main}"
-                                                        HorizontalAlignment="Center" Margin="0,8" MinHeight="140" ToolTip="Master volume MAIN"/>
+                                                <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center" Margin="0,6,0,0">
+                                                    <TextBlock Text="{Binding MainVolumeDb, StringFormat={}{0:0.0} dB}" FontWeight="SemiBold" HorizontalAlignment="Center" ToolTip="Posisi fader"/>
+                                                    <TextBlock Text="{Binding MainMeter.PeakText, StringFormat=peak {0}}" Foreground="{StaticResource Ap.Main}" FontSize="11"
+                                                               HorizontalAlignment="Center" ToolTip="Puncak output MAIN (dBFS)"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8">
+                                                    <Slider Style="{StaticResource Ap.FaderV}" Value="{Binding MainVolumeDb}" Foreground="{StaticResource Ap.Main}"
+                                                            MinHeight="140" ToolTip="Master volume MAIN"/>
+                                                    <c:LevelMeter DataContext="{Binding MainMeter}" Margin="4,0,0,0"
+                                                                  LeftDb="{Binding LeftDb}" RightDb="{Binding RightDb}" LeftHoldDb="{Binding LeftHoldDb}" RightHoldDb="{Binding RightHoldDb}"
+                                                                  Clipped="{Binding Clipped}" ResetClipCommand="{Binding ResetClipCommand}"/>
+                                                </StackPanel>
                                             </DockPanel>
                                             <DockPanel Grid.Column="1">
                                                 <Border DockPanel.Dock="Top" Style="{StaticResource Ap.Chip}" Background="{StaticResource Ap.Cue}" HorizontalAlignment="Center">
                                                     <TextBlock Text="MONITOR" Style="{StaticResource Ap.ChipText}"/>
                                                 </Border>
-                                                <TextBlock DockPanel.Dock="Bottom" Text="{Binding MonitorVolumeDb, StringFormat={}{0:0.0} dB}" HorizontalAlignment="Center"
-                                                           FontWeight="SemiBold" Margin="0,6,0,0"/>
-                                                <Slider Style="{StaticResource Ap.FaderV}" Value="{Binding MonitorVolumeDb}" Foreground="{StaticResource Ap.Cue}"
-                                                        HorizontalAlignment="Center" Margin="0,8" MinHeight="140" ToolTip="Master volume MONITOR"/>
+                                                <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center" Margin="0,6,0,0">
+                                                    <TextBlock Text="{Binding MonitorVolumeDb, StringFormat={}{0:0.0} dB}" FontWeight="SemiBold" HorizontalAlignment="Center" ToolTip="Posisi fader"/>
+                                                    <TextBlock Text="{Binding MonitorMeter.PeakText, StringFormat=peak {0}}" Foreground="{StaticResource Ap.Cue}" FontSize="11"
+                                                               HorizontalAlignment="Center" ToolTip="Puncak output MONITOR (dBFS)"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8">
+                                                    <Slider Style="{StaticResource Ap.FaderV}" Value="{Binding MonitorVolumeDb}" Foreground="{StaticResource Ap.Cue}"
+                                                            MinHeight="140" ToolTip="Master volume MONITOR"/>
+                                                    <c:LevelMeter DataContext="{Binding MonitorMeter}" Margin="4,0,0,0"
+                                                                  LeftDb="{Binding LeftDb}" RightDb="{Binding RightDb}" LeftHoldDb="{Binding LeftHoldDb}" RightHoldDb="{Binding RightHoldDb}"
+                                                                  Clipped="{Binding Clipped}" ResetClipCommand="{Binding ResetClipCommand}"/>
+                                                </StackPanel>
                                             </DockPanel>
                                         </Grid>
                                     </Grid>

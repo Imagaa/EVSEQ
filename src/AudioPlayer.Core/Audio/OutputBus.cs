@@ -5,23 +5,29 @@ using NAudio.Wave.SampleProviders;
 
 namespace AudioPlayer.Core.Audio;
 
-/// <summary>One output path (Main or Monitor): mixer → master gain → WASAPI device.</summary>
+/// <summary>One output path (Main or Monitor): mixer → master gain → peak meter → WASAPI device.</summary>
 public sealed class OutputBus : IDisposable
 {
     public static readonly WaveFormat Format = WaveFormat.CreateIeeeFloatWaveFormat(48000, 2);
 
     private readonly SmoothGainSampleProvider master;
+    private readonly PeakMeterSampleProvider meter;
     private WasapiPlayer? player;
 
     public OutputBus()
     {
         Mixer = new MixingSampleProvider(Format) { ReadFully = true };
         master = new SmoothGainSampleProvider(Mixer);
+        meter = new PeakMeterSampleProvider(master);
     }
 
     public MixingSampleProvider Mixer { get; }
 
-    public ISampleProvider Output => master;
+    /// <summary>What the device receives (after the master fader).</summary>
+    public ISampleProvider Output => meter;
+
+    /// <summary>Linear L/R output peaks since the previous call (for the level meters).</summary>
+    public (float Left, float Right) TakePeaks() => meter.TakePeaks();
 
     public double VolumeDb
     {
@@ -39,7 +45,7 @@ public sealed class OutputBus : IDisposable
         if (device is null) return;
 
         var p = new WasapiPlayerBuilder().WithDevice(device).WithLatency(50).Build();
-        p.Init(new SampleToWaveProvider(master));
+        p.Init(new SampleToWaveProvider(meter));
         p.PlaybackStopped += (_, e) => { if (e.Exception is not null) PlaybackFailed?.Invoke(this, e.Exception); };
         p.Play();
         player = p;
