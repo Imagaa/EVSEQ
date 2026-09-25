@@ -1,11 +1,24 @@
 <Window x:Class="AudioPlayer.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Audio Player" Height="640" Width="1100">
+        Title="{Binding WindowTitle}" Height="640" Width="1100">
+    <Window.CommandBindings>
+        <CommandBinding Command="New" Executed="New_Executed"/>
+        <CommandBinding Command="Open" Executed="Open_Executed"/>
+        <CommandBinding Command="Save" Executed="Save_Executed"/>
+        <CommandBinding Command="SaveAs" Executed="SaveAs_Executed"/>
+    </Window.CommandBindings>
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File" x:Name="FileMenu">
+                <MenuItem Command="New" Header="_Baru"/>
+                <MenuItem Command="Open" Header="_Buka..."/>
+                <MenuItem Command="Save" Header="_Simpan"/>
+                <MenuItem Command="SaveAs" Header="Simpan _sebagai..."/>
+                <Separator/>
                 <MenuItem Header="_Tambah file audio..." Click="AddFiles_Click"/>
+                <Separator/>
+                <MenuItem Header="_Keluar" Click="Exit_Click"/>
             </MenuItem>
             <MenuItem Header="_Settings..." Click="Settings_Click"/>
         </Menu>

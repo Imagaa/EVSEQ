@@ -56,6 +56,18 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public void MarkDirty() => IsDirty = true;
 
+    public string WindowTitle =>
+        $"{(ProjectPath is null ? "Tanpa judul" : Path.GetFileNameWithoutExtension(ProjectPath))}{(IsDirty ? " *" : "")} — Audio Player";
+
+    partial void OnIsDirtyChanged(bool value) => OnPropertyChanged(nameof(WindowTitle));
+
+    public void MarkSaved(string path)
+    {
+        ProjectPath = path;
+        IsDirty = false;
+        OnPropertyChanged(nameof(WindowTitle));
+    }
+
     public void Load(Project project, string? path)
     {
         Engine.Panic();
@@ -72,6 +84,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(MainVolumeDb));
         OnPropertyChanged(nameof(MonitorVolumeDb));
         IsDirty = false;
+        OnPropertyChanged(nameof(WindowTitle));
     }
 
     public void AddFiles(IEnumerable<string> paths)
