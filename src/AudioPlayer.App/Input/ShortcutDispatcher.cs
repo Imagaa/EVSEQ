@@ -12,7 +12,7 @@ public sealed class ShortcutDispatcher : IDisposable
     private readonly Window window;
     private readonly MainViewModel vm;
     private readonly GlobalHotkeys hotkeys;
-    private readonly List<(Gesture Gesture, ShortcutBinding Binding)> local = [];
+    private readonly List<(Gesture Gesture, Action Action)> local = [];
 
     public ShortcutDispatcher(Window window, MainViewModel vm)
     {
@@ -22,19 +22,32 @@ public sealed class ShortcutDispatcher : IDisposable
         window.PreviewKeyDown += OnPreviewKeyDown;
     }
 
+    /// <summary>Re-registers project shortcuts and per-track shortcuts; returns problems found.</summary>
     public IReadOnlyList<string> Reload()
     {
         var errors = new List<string>();
+        var used = new HashSet<Gesture>();
         hotkeys.UnregisterAll();
         local.Clear();
-        foreach (var b in vm.Project.Shortcuts)
+
+        void Add(string text, bool global, Action action, string owner)
         {
-            if (!Gesture.TryParse(b.Gesture, out var g))
-                errors.Add($"Shortcut tidak valid: '{b.Gesture}'.");
-            else if (!b.Global)
-                local.Add((g, b));
-            else if (!hotkeys.Register(g, () => Execute(b)))
-                errors.Add($"'{b.Gesture}' sudah dipakai aplikasi lain.");
+            if (!Gesture.TryParse(text, out var g))
+                errors.Add($"Shortcut tidak valid: '{text}' ({owner}).");
+            else if (!used.Add(g))
+                errors.Add($"'{text}' dipakai lebih dari satu shortcut ({owner} diabaikan).");
+            else if (!global)
+                local.Add((g, action));
+            else if (!hotkeys.Register(g, action))
+                errors.Add($"'{text}' sudah dipakai aplikasi lain ({owner}).");
+        }
+
+        foreach (var b in vm.Project.Shortcuts)
+            Add(b.Gesture, b.Global, () => Execute(b), b.Action.ToString());
+        foreach (var t in vm.Tracks)
+        {
+            if (t.Track.Shortcut is { } s)
+                Add(s, t.Track.ShortcutGlobal, () => vm.PlayTrack(t), $"track {t.Number}");
         }
         return errors;
     }
@@ -67,10 +80,10 @@ public sealed class ShortcutDispatcher : IDisposable
         // never hijack typing, and let focused buttons (welcome screen) take Enter/Space
         if (e.OriginalSource is TextBox or ButtonBase) return;
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
-        foreach (var (g, b) in local)
+        foreach (var (g, action) in local)
         {
             if (g.Key != key || g.Modifiers != Keyboard.Modifiers) continue;
-            Execute(b);
+            action();
             e.Handled = true;
             return;
         }

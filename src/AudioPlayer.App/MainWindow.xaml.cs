@@ -28,6 +28,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = vm;
+        vm.ShortcutsChanged += () => { if (shortcuts is not null) ReloadShortcuts(); };
         Loaded += (_, _) =>
         {
             OfferRecovery();
@@ -48,6 +49,25 @@ public partial class MainWindow : Window
             shortcuts?.Dispose();
             vm.Dispose();
         };
+    }
+
+    /// <summary>Records the pressed key combination as the track's shortcut.</summary>
+    private void ShortcutBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Tab) return; // keep keyboard navigation
+        e.Handled = true;
+        var track = (TrackViewModel)((FrameworkElement)sender).DataContext;
+        if (e.Key == Key.Escape)
+        {
+            FocusMain();
+            return;
+        }
+        if (e.Key is Key.Back or Key.Delete && Keyboard.Modifiers == ModifierKeys.None)
+        {
+            track.Shortcut = "";
+            return;
+        }
+        if (Gesture.FromKeyEvent(e) is { } g) track.Shortcut = g.ToString();
     }
 
     private void ReloadShortcuts()

@@ -31,4 +31,26 @@ public readonly record struct Gesture(ModifierKeys Modifiers, Key Key)
         gesture = new Gesture(mods, key);
         return true;
     }
+
+    /// <summary>The gesture for a key press, or null while only modifier keys are down.</summary>
+    public static Gesture? FromKeyEvent(KeyEventArgs e)
+    {
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt
+            or Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin or Key.None)
+            return null;
+        return new Gesture(Keyboard.Modifiers, key);
+    }
+
+    /// <summary>Same format TryParse accepts, e.g. "Ctrl+Shift+F1".</summary>
+    public override string ToString()
+    {
+        var parts = new List<string>();
+        if (Modifiers.HasFlag(ModifierKeys.Control)) parts.Add("Ctrl");
+        if (Modifiers.HasFlag(ModifierKeys.Alt)) parts.Add("Alt");
+        if (Modifiers.HasFlag(ModifierKeys.Shift)) parts.Add("Shift");
+        if (Modifiers.HasFlag(ModifierKeys.Windows)) parts.Add("Win");
+        parts.Add(Key.ToString());
+        return string.Join("+", parts);
+    }
 }

@@ -169,6 +169,21 @@ public class PlayerEngineTests : IDisposable
     }
 
     [Fact]
+    public void PerTrackFadeOverridesDefault()
+    {
+        Track slow = NewTrack(), normal = NewTrack();
+        slow.FadeInMs = 1000; // default in these tests is 10 ms
+        engine.Play(normal);
+        var fast = Rms(Pull(main, 100)[^960..]);
+        engine.Panic();
+
+        engine.Play(slow);
+        var ramping = Rms(Pull(main, 100)[^960..]);
+
+        Assert.True(ramping < fast * 0.5f, $"slow fade {ramping} should be well below {fast}");
+    }
+
+    [Fact]
     public void RefreshAppliesVolumeLive()
     {
         var t = NewTrack();

@@ -22,7 +22,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             Application.Current.Dispatcher.InvokeAsync(() => OnDeviceUnavailable(id));
         Engine.Main.PlaybackFailed += (_, ex) => BusFailed(BusKind.Main, ex.Message);
         Engine.Monitor.PlaybackFailed += (_, ex) => BusFailed(BusKind.Monitor, ex.Message);
-        Tracks.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ShowWelcome));
+        Tracks.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(ShowWelcome));
+            NotifyShortcutsChanged(); // per-track shortcuts follow their tracks
+        };
         Load(new Project(), null);
         timer.Tick += (_, _) => Tick();
         timer.Start();
@@ -129,10 +133,18 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Status = string.Join("  ", notes);
     }
 
+    /// <summary>Raised when any shortcut source changes (track shortcut edited, tracks added/removed).</summary>
+    public event Action? ShortcutsChanged;
+
+    public void NotifyShortcutsChanged() => ShortcutsChanged?.Invoke();
+
     public void PlayNumber(int number)
     {
-        if (number < 1 || number > Tracks.Count) return;
-        var t = Tracks[number - 1];
+        if (number >= 1 && number <= Tracks.Count) PlayTrack(Tracks[number - 1]);
+    }
+
+    public void PlayTrack(TrackViewModel t)
+    {
         Selected = t;
         Run(t, x => Engine.Play(x.Track));
     }
@@ -144,6 +156,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Project.MonitorDeviceId = monitorDeviceId;
         Project.DefaultFade = fade;
         Engine.DefaultFade = fade;
+        foreach (var t in Tracks) t.DefaultsChanged();
         if (devicesChanged)
         {
             Alert = null;

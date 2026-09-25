@@ -28,7 +28,7 @@ public class ProjectSerializerTests
             Tracks =
             [
                 new Track { FilePath = audio, Title = "Opening", VolumeDb = -6, Loop = true, Overlay = true,
-                            Fade = new FadeSettings { FadeInMs = 50 } },
+                            FadeInMs = 50, Shortcut = "Ctrl+J", ShortcutGlobal = true },
             ],
             Shortcuts = [new ShortcutBinding(ShortcutAction.PlayTrack, "Ctrl+Alt+D1", Global: true, TrackNumber: 1)],
         };
@@ -50,7 +50,10 @@ public class ProjectSerializerTests
         Assert.Equal(-6, t.VolumeDb);
         Assert.True(t.Loop);
         Assert.True(t.Overlay);
-        Assert.Equal(50, t.Fade!.FadeInMs);
+        Assert.Equal(50, t.FadeInMs);
+        Assert.Null(t.FadeOutMs);
+        Assert.Equal("Ctrl+J", t.Shortcut);
+        Assert.True(t.ShortcutGlobal);
         Assert.Equal(p.Shortcuts, q.Shortcuts);
         Assert.False(File.Exists(file + ".tmp"));
     }

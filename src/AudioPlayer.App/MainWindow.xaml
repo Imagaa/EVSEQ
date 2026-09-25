@@ -1,7 +1,7 @@
 <Window x:Class="AudioPlayer.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="{Binding WindowTitle}" Height="640" Width="1100">
+        Title="{Binding WindowTitle}" Height="640" Width="1420">
     <Window.CommandBindings>
         <CommandBinding Command="New" Executed="New_Executed"/>
         <CommandBinding Command="Open" Executed="Open_Executed"/>
@@ -107,7 +107,7 @@
             <ListView.View>
                 <GridView>
                     <GridViewColumn Header="#" DisplayMemberBinding="{Binding Number}" Width="36"/>
-                    <GridViewColumn Header="Judul" DisplayMemberBinding="{Binding Title}" Width="280"/>
+                    <GridViewColumn Header="Judul" DisplayMemberBinding="{Binding Title}" Width="240"/>
                     <GridViewColumn Header="Durasi" DisplayMemberBinding="{Binding DurationText}" Width="70"/>
                     <GridViewColumn Header="Sisa" DisplayMemberBinding="{Binding RemainingText}" Width="70"/>
                     <GridViewColumn Header="Transport" Width="180">
@@ -137,7 +137,42 @@
                             <DataTemplate><CheckBox IsChecked="{Binding Overlay}" Focusable="False" ToolTip="Main di atas track lain tanpa menghentikannya (jingle/SFX)"/></DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Header="Volume" Width="210">
+                    <GridViewColumn Header="Fade in" Width="70">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <Grid ToolTip="Fade-in (ms). Kosongkan untuk memakai default dari Settings.">
+                                    <TextBox Text="{Binding FadeInText, UpdateSourceTrigger=PropertyChanged}" Width="54"/>
+                                    <TextBlock Text="{Binding DefaultFadeIn}" Foreground="#A0A0A0" FontStyle="Italic" Margin="5,1,0,0"
+                                               IsHitTestVisible="False" Visibility="{Binding UsesDefaultFadeIn, Converter={StaticResource BoolToVisibility}}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Fade out" Width="70">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <Grid ToolTip="Fade-out (ms). Kosongkan untuk memakai default dari Settings.">
+                                    <TextBox Text="{Binding FadeOutText, UpdateSourceTrigger=PropertyChanged}" Width="54"/>
+                                    <TextBlock Text="{Binding DefaultFadeOut}" Foreground="#A0A0A0" FontStyle="Italic" Margin="5,1,0,0"
+                                               IsHitTestVisible="False" Visibility="{Binding UsesDefaultFadeOut, Converter={StaticResource BoolToVisibility}}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Shortcut" Width="160">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBox Text="{Binding Shortcut, Mode=OneWay}" Width="100" IsReadOnly="True"
+                                             PreviewKeyDown="ShortcutBox_PreviewKeyDown"
+                                             ToolTip="Klik lalu tekan tombol untuk memutar track ini di Main. Backspace = hapus, Esc = batal."/>
+                                    <CheckBox IsChecked="{Binding ShortcutGlobal}" Content="G" Margin="6,0,0,0" VerticalAlignment="Center"
+                                              Focusable="False" ToolTip="Global: aktif walau jendela tidak fokus"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Volume" Width="190">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">

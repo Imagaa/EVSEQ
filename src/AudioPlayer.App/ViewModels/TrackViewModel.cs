@@ -47,6 +47,69 @@ public sealed partial class TrackViewModel : ObservableObject
     public bool Loop { get => Track.Loop; set { Track.Loop = value; Changed(); } }
     public bool Overlay { get => Track.Overlay; set { Track.Overlay = value; Changed(); } }
 
+    // Fade override per track; empty text = use the project default (shown as a grey hint).
+    public string FadeInText
+    {
+        get => Track.FadeInMs?.ToString() ?? "";
+        set
+        {
+            if (TryFade(value, out var ms)) { Track.FadeInMs = ms; owner.MarkDirty(); }
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(UsesDefaultFadeIn));
+        }
+    }
+
+    public string FadeOutText
+    {
+        get => Track.FadeOutMs?.ToString() ?? "";
+        set
+        {
+            if (TryFade(value, out var ms)) { Track.FadeOutMs = ms; owner.MarkDirty(); }
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(UsesDefaultFadeOut));
+        }
+    }
+
+    public bool UsesDefaultFadeIn => Track.FadeInMs is null;
+    public bool UsesDefaultFadeOut => Track.FadeOutMs is null;
+    public int DefaultFadeIn => owner.Project.DefaultFade.FadeInMs;
+    public int DefaultFadeOut => owner.Project.DefaultFade.FadeOutMs;
+
+    public void DefaultsChanged()
+    {
+        OnPropertyChanged(nameof(DefaultFadeIn));
+        OnPropertyChanged(nameof(DefaultFadeOut));
+    }
+
+    /// <summary>Gesture that plays this track on Main ("" = none).</summary>
+    public string Shortcut
+    {
+        get => Track.Shortcut ?? "";
+        set { Track.Shortcut = string.IsNullOrEmpty(value) ? null : value; ShortcutChanged(); }
+    }
+
+    public bool ShortcutGlobal
+    {
+        get => Track.ShortcutGlobal;
+        set { Track.ShortcutGlobal = value; ShortcutChanged(); }
+    }
+
+    private static bool TryFade(string text, out int? ms)
+    {
+        ms = null;
+        if (string.IsNullOrWhiteSpace(text)) return true;
+        if (!int.TryParse(text, out var v) || v is < 0 or > 10000) return false;
+        ms = v;
+        return true;
+    }
+
+    private void ShortcutChanged([CallerMemberName] string? name = null)
+    {
+        owner.MarkDirty();
+        OnPropertyChanged(name);
+        owner.NotifyShortcutsChanged();
+    }
+
     private void Changed([CallerMemberName] string? name = null)
     {
         owner.Engine.Refresh(Track);

@@ -146,5 +146,10 @@ public sealed class PlayerEngine : IDisposable
 
     private Voice? Find(Track t, BusKind bus) => active.Find(v => v.Track == t && v.Bus == bus);
     private OutputBus BusOf(BusKind bus) => bus == BusKind.Main ? Main : Monitor;
-    private FadeSettings FadeOf(Track t) => t.Fade ?? DefaultFade;
+    private FadeSettings FadeOf(Track t) => new()
+    {
+        FadeInMs = t.FadeInMs ?? DefaultFade.FadeInMs,
+        FadeOutMs = t.FadeOutMs ?? DefaultFade.FadeOutMs,
+        Curve = DefaultFade.Curve,
+    };
 }
