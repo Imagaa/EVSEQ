@@ -34,6 +34,20 @@ public static class ProjectSerializer
             var candidate = Path.GetFullPath(Path.Combine(dir, t.RelativePath));
             if (File.Exists(candidate)) t.FilePath = candidate;
         }
+        AddMissingDefaultShortcuts(project);
         return project;
+    }
+
+    /// <summary>Projects saved before an action existed get its default key, unless that key is already taken.</summary>
+    private static void AddMissingDefaultShortcuts(Project project)
+    {
+        var used = project.Shortcuts.Select(s => s.Gesture)
+            .Concat(project.Tracks.Select(t => t.Shortcut).OfType<string>())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var d in DefaultShortcuts.Create())
+        {
+            if (d.Action == ShortcutAction.PlayTrack || project.Shortcuts.Any(s => s.Action == d.Action)) continue;
+            if (used.Add(d.Gesture)) project.Shortcuts.Add(d);
+        }
     }
 }

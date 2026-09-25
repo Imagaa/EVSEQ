@@ -10,6 +10,22 @@
     </Window.CommandBindings>
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+        <Style x:Key="BarButton" TargetType="Button">
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Focusable" Value="False"/>
+        </Style>
+        <!-- Click, then press a key combination to assign it (Backspace clears, Esc cancels) -->
+        <Style x:Key="KeyBox" TargetType="TextBox">
+            <Setter Property="Width" Value="64"/>
+            <Setter Property="Margin" Value="4,0,0,0"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="#555"/>
+            <Setter Property="ToolTip" Value="Shortcut: klik lalu tekan tombol. Backspace = hapus, Esc = batal."/>
+            <EventSetter Event="PreviewKeyDown" Handler="ShortcutBox_PreviewKeyDown"/>
+        </Style>
         <!-- Grey default value shown inside an empty fade box (the TextBox sibling is named "Box") -->
         <Style x:Key="DefaultHint" TargetType="TextBlock">
             <Setter Property="Foreground" Value="#A0A0A0"/>
@@ -82,6 +98,7 @@
                     <ColumnDefinition Width="60"/>
                     <ColumnDefinition/>
                     <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="MAIN" FontWeight="Bold" Foreground="White" Background="#C62828" Padding="8,3" TextAlignment="Center" VerticalAlignment="Center"/>
                 <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="18" FontWeight="Bold" Margin="10,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
@@ -91,6 +108,13 @@
                         Tag="{Binding}" Thumb.DragStarted="Seek_DragStarted" Thumb.DragCompleted="Seek_DragCompleted"
                         Focusable="False" VerticalAlignment="Center" ToolTip="Klik/geser untuk pindah posisi di Main"/>
                 <TextBlock Grid.Column="4" Text="{Binding RemainingText}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="5" Orientation="Horizontal" Margin="10,0,0,0"
+                            DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                    <Button Content="{Binding MainBar.PlayLabel}" Command="{Binding MainPlayPauseCommand}" Style="{StaticResource BarButton}" ToolTip="Play/Pause Main"/>
+                    <TextBox Text="{Binding MainPlayPauseKey, UpdateSourceTrigger=Explicit}" Style="{StaticResource KeyBox}"/>
+                    <Button Content="■" Command="{Binding MainStopCommand}" Style="{StaticResource BarButton}" Margin="8,0,0,0" ToolTip="Stop Main (dengan fade)"/>
+                    <TextBox Text="{Binding MainStopKey, UpdateSourceTrigger=Explicit}" Style="{StaticResource KeyBox}"/>
+                </StackPanel>
             </Grid>
 
             <!-- CUE seek bar: preview on Monitor, and where start/end points are set -->
@@ -102,6 +126,7 @@
                     <ColumnDefinition/>
                     <ColumnDefinition Width="80"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="CUE" FontWeight="Bold" Foreground="White" Background="#1565C0" Padding="8,3" TextAlignment="Center" VerticalAlignment="Center"/>
                 <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="14" Margin="10,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
@@ -112,6 +137,13 @@
                         Focusable="False" VerticalAlignment="Center" ToolTip="Klik/geser untuk pindah posisi preview atau memilih titik start/end"/>
                 <TextBlock Grid.Column="4" Text="{Binding RemainingText}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                 <StackPanel Grid.Column="5" Orientation="Horizontal" Margin="10,0,0,0"
+                            DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                    <Button Content="{Binding CueBar.PlayLabel}" Command="{Binding CuePlayPauseCommand}" Style="{StaticResource BarButton}" ToolTip="Play/Pause preview di Monitor (mulai dari posisi slider CUE)"/>
+                    <TextBox Text="{Binding CuePlayPauseKey, UpdateSourceTrigger=Explicit}" Style="{StaticResource KeyBox}"/>
+                    <Button Content="■" Command="{Binding CueStopCommand}" Style="{StaticResource BarButton}" Margin="8,0,0,0" ToolTip="Stop preview"/>
+                    <TextBox Text="{Binding CueStopKey, UpdateSourceTrigger=Explicit}" Style="{StaticResource KeyBox}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="6" Orientation="Horizontal" Margin="10,0,0,0"
                             DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}" IsEnabled="{Binding CueBar.HasTrack}">
                     <Button Content="⇤ Set start" Command="{Binding SetStartCommand}" Focusable="False" Padding="8,2" ToolTip="Jadikan posisi slider CUE sebagai titik mulai"/>
                     <Button Content="Set end ⇥" Command="{Binding SetEndCommand}" Focusable="False" Padding="8,2" Margin="4,0" ToolTip="Jadikan posisi slider CUE sebagai titik akhir"/>
@@ -219,8 +251,7 @@
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBox Text="{Binding Shortcut, Mode=OneWay}" Width="100" IsReadOnly="True"
-                                             PreviewKeyDown="ShortcutBox_PreviewKeyDown"
+                                    <TextBox Text="{Binding Shortcut, UpdateSourceTrigger=Explicit}" Style="{StaticResource KeyBox}" Width="100" Margin="0"
                                              ToolTip="Klik lalu tekan tombol untuk memutar track ini di Main. Backspace = hapus, Esc = batal."/>
                                     <CheckBox IsChecked="{Binding ShortcutGlobal}" Content="G" Margin="6,0,0,0" VerticalAlignment="Center"
                                               Focusable="False" ToolTip="Global: aktif walau jendela tidak fokus"/>

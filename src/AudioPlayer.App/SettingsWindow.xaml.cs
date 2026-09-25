@@ -53,10 +53,11 @@ public partial class SettingsWindow : Window
         var problems = new List<string>();
         foreach (var r in rows)
         {
-            if (!Gesture.TryParse(r.Gesture, out _)) problems.Add($"Tombol tidak valid: '{r.Gesture}'");
+            r.Gesture ??= "";
+            if (r.Gesture.Trim() != "" && !Gesture.TryParse(r.Gesture, out _)) problems.Add($"Tombol tidak valid: '{r.Gesture}'");
             if (r.Action == ShortcutAction.PlayTrack && r.TrackNumber is not > 0) problems.Add($"'{r.Gesture}': PlayTrack butuh Track # ≥ 1");
         }
-        problems.AddRange(rows.GroupBy(r => r.Gesture.Replace(" ", "").ToLowerInvariant())
+        problems.AddRange(rows.Where(r => r.Gesture.Trim() != "").GroupBy(r => r.Gesture.Replace(" ", "").ToLowerInvariant())
             .Where(g => g.Count() > 1).Select(g => $"Tombol dipakai lebih dari sekali: '{g.First().Gesture}'"));
         if (problems.Count > 0)
         {

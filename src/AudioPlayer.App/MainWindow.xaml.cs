@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using AudioPlayer.App.Input;
@@ -58,23 +59,26 @@ public partial class MainWindow : Window
     private void Seek_DragCompleted(object sender, RoutedEventArgs e) =>
         ((SeekBarViewModel)((FrameworkElement)sender).Tag).EndDrag();
 
-    /// <summary>Records the pressed key combination as the track's shortcut.</summary>
+    /// <summary>
+    /// Records the pressed key combination into a shortcut box. Works for any box whose Text binding
+    /// uses UpdateSourceTrigger=Explicit (track shortcuts, seek-bar transport keys).
+    /// </summary>
     private void ShortcutBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Tab) return; // keep keyboard navigation
         e.Handled = true;
-        var track = (TrackViewModel)((FrameworkElement)sender).DataContext;
+        var box = (TextBox)sender;
         if (e.Key == Key.Escape)
         {
             FocusMain();
             return;
         }
-        if (e.Key is Key.Back or Key.Delete && Keyboard.Modifiers == ModifierKeys.None)
-        {
-            track.Shortcut = "";
-            return;
-        }
-        if (Gesture.FromKeyEvent(e) is { } g) track.Shortcut = g.ToString();
+        string? text = e.Key is Key.Back or Key.Delete && Keyboard.Modifiers == ModifierKeys.None
+            ? ""
+            : Gesture.FromKeyEvent(e)?.ToString();
+        if (text is null) return; // only modifiers held so far
+        box.Text = text;
+        box.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
     }
 
     private void ReloadShortcuts()

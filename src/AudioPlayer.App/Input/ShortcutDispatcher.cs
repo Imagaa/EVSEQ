@@ -32,6 +32,7 @@ public sealed class ShortcutDispatcher : IDisposable
 
         void Add(string text, bool global, Action action, string owner)
         {
+            if (string.IsNullOrWhiteSpace(text)) return; // unassigned
             if (!Gesture.TryParse(text, out var g))
                 errors.Add($"Shortcut tidak valid: '{text}' ({owner}).");
             else if (!used.Add(g))
@@ -66,6 +67,10 @@ public sealed class ShortcutDispatcher : IDisposable
                 if (b.TrackNumber is { } n) vm.PlayNumber(n);
                 break;
             case ShortcutAction.Panic: vm.PanicCommand.Execute(null); break;
+            case ShortcutAction.MainPlayPause: vm.MainPlayPauseCommand.Execute(null); break;
+            case ShortcutAction.MainStop: vm.MainStopCommand.Execute(null); break;
+            case ShortcutAction.CuePlayPause: vm.CuePlayPauseCommand.Execute(null); break;
+            case ShortcutAction.CueStop: vm.CueStopCommand.Execute(null); break;
         }
     }
 

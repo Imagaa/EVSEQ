@@ -24,6 +24,14 @@ public sealed partial class SeekBarViewModel(PlayerEngine engine, BusKind bus) :
     [ObservableProperty] public partial string RemainingText { get; set; } = "";
     [ObservableProperty] public partial string RangeText { get; set; } = "";
 
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(PlayLabel))]
+    public partial bool IsPlaying { get; set; }
+
+    public string PlayLabel => IsPlaying ? "⏸" : "▶";
+
+    /// <summary>True when the thumb is a free cursor away from the start point (no voice running).</summary>
+    public bool CursorMoved => Target is not null && Math.Abs(position - Target.StartSeconds) > 0.05;
+
     /// <summary>Seconds from file start. Set by the slider: seeks unless the thumb is being dragged.</summary>
     public double Position
     {
@@ -54,6 +62,7 @@ public sealed partial class SeekBarViewModel(PlayerEngine engine, BusKind bus) :
             position = t?.StartSeconds ?? 0;
         }
         HasTrack = t is not null;
+        IsPlaying = t is not null && engine.GetState(t.Track, bus) == PlayState.Playing;
         if (t is null)
         {
             Title = "—";

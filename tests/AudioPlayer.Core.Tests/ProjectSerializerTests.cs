@@ -54,7 +54,7 @@ public class ProjectSerializerTests
         Assert.Null(t.FadeOutMs);
         Assert.Equal("Ctrl+J", t.Shortcut);
         Assert.True(t.ShortcutGlobal);
-        Assert.Equal(p.Shortcuts, q.Shortcuts);
+        Assert.Equal(p.Shortcuts[0], q.Shortcuts[0]);
         Assert.False(File.Exists(file + ".tmp"));
     }
 
@@ -86,6 +86,42 @@ public class ProjectSerializerTests
 
         Assert.Equal(@"Z:\nope\gone.wav", q.Tracks[0].FilePath);
         Assert.True(q.Tracks[0].IsMissing);
+    }
+
+    [Fact]
+    public void OlderProjectGetsNewDefaultShortcutsWithoutKeyClashes()
+    {
+        var dir = NewDir();
+        var file = Path.Combine(dir, "old.approj");
+        // Saved before the Main/Cue transport actions existed; F7 already taken by a track.
+        ProjectSerializer.Save(new Project
+        {
+            Shortcuts = [new ShortcutBinding(ShortcutAction.Panic, "F12")],
+            Tracks = [new Track { FilePath = @"Z:\a.wav", Shortcut = "F7" }],
+        }, file);
+
+        var q = ProjectSerializer.Load(file);
+
+        Assert.Contains(q.Shortcuts, s => s is { Action: ShortcutAction.MainPlayPause, Gesture: "F5" });
+        Assert.Contains(q.Shortcuts, s => s is { Action: ShortcutAction.CueStop, Gesture: "F8" });
+        Assert.DoesNotContain(q.Shortcuts, s => s.Action == ShortcutAction.CuePlayPause); // F7 clash skipped
+        Assert.Single(q.Shortcuts, s => s.Action == ShortcutAction.Panic);
+        Assert.DoesNotContain(q.Shortcuts, s => s.Action == ShortcutAction.PlayTrack); // removed ones stay removed
+    }
+
+    [Fact]
+    public void ClearedShortcutStaysClearedAfterReload()
+    {
+        var dir = NewDir();
+        var file = Path.Combine(dir, "p.approj");
+        var p = new Project();
+        p.Shortcuts.RemoveAll(s => s.Action == ShortcutAction.MainStop);
+        p.Shortcuts.Add(new ShortcutBinding(ShortcutAction.MainStop, "")); // user cleared the key
+        ProjectSerializer.Save(p, file);
+
+        var q = ProjectSerializer.Load(file);
+
+        Assert.Equal("", Assert.Single(q.Shortcuts, s => s.Action == ShortcutAction.MainStop).Gesture);
     }
 
     [Fact]

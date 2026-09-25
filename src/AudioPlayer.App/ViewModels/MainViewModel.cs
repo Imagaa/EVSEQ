@@ -101,6 +101,72 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     [RelayCommand] private void ResetRange() => CueBar.Target?.SetRange(null, null);
 
+    // Transport on the seek bars. Main falls back to the selected track when nothing is on Main.
+    [RelayCommand]
+    private void MainPlayPause() => Run(MainBar.Target ?? Selected, x =>
+    {
+        if (Engine.GetState(x.Track, BusKind.Main) == PlayState.Playing) Engine.Pause(x.Track, BusKind.Main);
+        else Engine.Play(x.Track);
+    });
+
+    [RelayCommand]
+    private void MainStop()
+    {
+        if (MainBar.Target is { } t) Engine.Stop(t.Track, BusKind.Main);
+    }
+
+    /// <summary>From stopped, the preview starts where the cue cursor is.</summary>
+    [RelayCommand]
+    private void CuePlayPause() => Run(CueBar.Target ?? Selected, x =>
+    {
+        switch (Engine.GetState(x.Track, BusKind.Monitor))
+        {
+            case PlayState.Playing:
+                Engine.Pause(x.Track, BusKind.Monitor);
+                break;
+            case PlayState.Paused:
+                Engine.Preview(x.Track); // resumes
+                break;
+            default:
+                var from = CueBar.Target == x && CueBar.CursorMoved ? CueBar.Position : (double?)null;
+                Engine.Preview(x.Track);
+                if (from is { } s) Engine.Seek(x.Track, BusKind.Monitor, TimeSpan.FromSeconds(s));
+                break;
+        }
+    });
+
+    [RelayCommand]
+    private void CueStop()
+    {
+        if (CueBar.Target is { } t) Engine.Stop(t.Track, BusKind.Monitor);
+    }
+
+    // Keys for the seek-bar transport, edited in place next to the buttons. Cleared keys are kept
+    // as an empty binding so loading the project does not re-add the default.
+    public string MainPlayPauseKey { get => KeyOf(ShortcutAction.MainPlayPause); set => SetKey(ShortcutAction.MainPlayPause, value); }
+    public string MainStopKey { get => KeyOf(ShortcutAction.MainStop); set => SetKey(ShortcutAction.MainStop, value); }
+    public string CuePlayPauseKey { get => KeyOf(ShortcutAction.CuePlayPause); set => SetKey(ShortcutAction.CuePlayPause, value); }
+    public string CueStopKey { get => KeyOf(ShortcutAction.CueStop); set => SetKey(ShortcutAction.CueStop, value); }
+
+    private string KeyOf(ShortcutAction action) => Project.Shortcuts.FirstOrDefault(s => s.Action == action)?.Gesture ?? "";
+
+    private void SetKey(ShortcutAction action, string gesture)
+    {
+        Project.Shortcuts.RemoveAll(s => s.Action == action);
+        Project.Shortcuts.Add(new ShortcutBinding(action, gesture ?? ""));
+        MarkDirty();
+        RefreshKeys();
+        NotifyShortcutsChanged();
+    }
+
+    private void RefreshKeys()
+    {
+        OnPropertyChanged(nameof(MainPlayPauseKey));
+        OnPropertyChanged(nameof(MainStopKey));
+        OnPropertyChanged(nameof(CuePlayPauseKey));
+        OnPropertyChanged(nameof(CueStopKey));
+    }
+
     public string WindowTitle =>
         $"{(ProjectPath is null ? "Tanpa judul" : Path.GetFileNameWithoutExtension(ProjectPath))}{(IsDirty ? " *" : "")} — Audio Player";
 
@@ -130,6 +196,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(MonitorVolumeDb));
         IsDirty = false;
         OnPropertyChanged(nameof(WindowTitle));
+        RefreshKeys();
     }
 
     public void AddFiles(IEnumerable<string> paths)
@@ -194,6 +261,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Project.DefaultFade = fade;
         Engine.DefaultFade = fade;
         foreach (var t in Tracks) t.DefaultsChanged();
+        RefreshKeys(); // the settings dialog may have edited the shortcut table
         if (devicesChanged)
         {
             Alert = null;
