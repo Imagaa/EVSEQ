@@ -54,6 +54,20 @@
             </DataGrid.Columns>
         </DataGrid>
 
+        <!-- Updates: bound directly to the UpdateViewModel (applies immediately, not on OK) -->
+        <StackPanel x:Name="UpdateSection" Margin="0,14,0,0">
+            <TextBlock Text="Update" FontWeight="Bold"/>
+            <CheckBox IsChecked="{Binding AutoUpdate}" Margin="0,6,0,0"
+                      Content="Periksa &amp; unduh update otomatis (dipasang saat EVSEQ ditutup)"/>
+            <DockPanel Margin="0,6,0,0">
+                <Button DockPanel.Dock="Right" Content="Cek update sekarang" Command="{Binding CheckNowCommand}" Padding="10,3"/>
+                <TextBlock VerticalAlignment="Center" Foreground="{StaticResource Ap.SubText}" TextWrapping="Wrap" Margin="0,0,8,0">
+                    <Run Text="Versi terpasang: "/><Run Text="{Binding CurrentVersionText, Mode=OneWay}" Foreground="{StaticResource Ap.Text}"/>
+                    <LineBreak/><Run Text="{Binding StatusText, Mode=OneWay}"/>
+                </TextBlock>
+            </DockPanel>
+        </StackPanel>
+
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
             <Button Content="OK" Width="80" IsDefault="True" Click="Ok_Click"/>
             <Button Content="Batal" Width="80" Margin="8,0,0,0" IsCancel="True"/>

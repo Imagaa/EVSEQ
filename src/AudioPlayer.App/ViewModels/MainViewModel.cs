@@ -23,6 +23,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Engine = new PlayerEngine(new OutputBus(), new OutputBus());
         MainBar = new SeekBarViewModel(Engine, BusKind.Main);
         Midi = new MidiViewModel(this);
+        Update = new UpdateViewModel(this, AppPaths.DataDir);
         CueBar = new SeekBarViewModel(Engine, BusKind.Monitor);
         Devices.DeviceUnavailable += id =>
             Application.Current.Dispatcher.InvokeAsync(() => OnDeviceUnavailable(id));
@@ -45,6 +46,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public PlayerEngine Engine { get; }
     public SeekBarViewModel MainBar { get; }
     public MidiViewModel Midi { get; }
+    public UpdateViewModel Update { get; }
 
     /// <summary>Output level of each bus, measured after the master fader.</summary>
     public MeterViewModel MainMeter { get; } = new();

@@ -108,6 +108,21 @@
             </DockPanel>
         </Border>
 
+        <!-- ===== Update banner: a verified newer version is downloaded and waiting ===== -->
+        <Border DockPanel.Dock="Top" Background="#1F3D2A" Padding="10,6"
+                Visibility="{Binding Update.BannerVisible, Converter={StaticResource BoolToVisibility}}">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Tutup" Command="{Binding Update.HideBannerCommand}" Style="{StaticResource Ap.ToolButton}" Margin="6,0,0,0"
+                        ToolTip="Sembunyikan; update tetap dipasang saat EVSEQ ditutup"/>
+                <Button DockPanel.Dock="Right" Content="Pasang sekarang" Command="{Binding Update.InstallNowCommand}" Style="{StaticResource Ap.ToolButton}"
+                        ToolTip="Tutup EVSEQ, pasang update, lalu buka lagi"/>
+                <TextBlock VerticalAlignment="Center" TextWrapping="Wrap">
+                    <Run Text="⬆ EVSEQ" FontWeight="SemiBold"/><Run Text=" v" FontWeight="SemiBold"/><Run Text="{Binding Update.ReadyVersion, Mode=OneWay}" FontWeight="SemiBold"/>
+                    <Run Text=" sudah diunduh dan siap dipasang. Update dipasang otomatis saat EVSEQ ditutup — project dan pengaturan tidak berubah."/>
+                </TextBlock>
+            </DockPanel>
+        </Border>
+
         <!-- ===== Status bar: save, autosave, devices. Wraps instead of cutting when narrow ===== -->
         <Border DockPanel.Dock="Bottom" Background="{StaticResource Ap.Panel}" BorderBrush="{StaticResource Ap.Line}" BorderThickness="0,1,0,0" Padding="8,4">
             <WrapPanel>
@@ -161,6 +176,8 @@
                 <TextBlock Style="{StaticResource Ap.Caption}" Margin="0,2,16,2">
                     <Run Text="Total playlist "/><Run Text="{Binding TotalText, Mode=OneWay}" Foreground="{StaticResource Ap.Text}"/>
                 </TextBlock>
+                <TextBlock Style="{StaticResource Ap.Caption}" Margin="0,2,16,2" Text="{Binding Update.CurrentVersionText, StringFormat=EVSEQ {0}}"
+                           ToolTip="{Binding Update.StatusText}"/>
                 <TextBlock Text="{Binding Status}" Foreground="{StaticResource Ap.Warn}" Margin="0,2" MaxWidth="600" TextTrimming="CharacterEllipsis"
                            ToolTip="{Binding Status}"/>
             </WrapPanel>

@@ -9,7 +9,7 @@
     <AssemblyName>EVSEQ</AssemblyName>
     <Product>Event Sequencer</Product>
     <ApplicationIcon>..\..\assets\brand\evseq.ico</ApplicationIcon>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>

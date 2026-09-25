@@ -18,29 +18,10 @@ public partial class MainWindow : Window
 {
     private const string ProjectFilter = "Project EVSEQ (*.approj)|*.approj";
 
-    private static readonly string AppDataDir = MigrateAppDataDir();
-
-    /// <summary>
-    /// %LOCALAPPDATA%\EVSEQ. Data from before the rename (\AudioPlayer: recent list, layout, autosave)
-    /// is moved over once so nothing is lost.
-    /// </summary>
-    private static string MigrateAppDataDir()
-    {
-        var root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        string dir = Path.Combine(root, "EVSEQ"), old = Path.Combine(root, "AudioPlayer");
-        if (Directory.Exists(dir) || !Directory.Exists(old)) return dir;
-        try
-        {
-            Directory.Move(old, dir);
-            return dir;
-        }
-        catch (IOException)
-        {
-            return old; // folder in use; keep using it rather than start empty
-        }
-    }
+    private static readonly string AppDataDir = AppPaths.DataDir;
 
     private readonly MainViewModel vm = new();
+    private bool relaunchAfterUpdate;
     private readonly SessionRecovery recovery = new(AppDataDir);
     private readonly RecentProjects recent = new(Path.Combine(AppDataDir, "recent.json"));
     private readonly DispatcherTimer autosave = new() { Interval = TimeSpan.FromSeconds(60) };
@@ -59,7 +40,12 @@ public partial class MainWindow : Window
             p.DataContext = vm;
         MidiPanel.DataContext = vm.Midi;
         vm.ShortcutsChanged += () => { if (shortcuts is not null) ReloadShortcuts(); };
-        Loaded += (_, _) =>
+        vm.Update.InstallNowRequested += () =>
+        {
+            relaunchAfterUpdate = true;
+            Close(); // asks to save first; cancelling keeps EVSEQ open and the update waiting
+        };
+        Loaded += async (_, _) =>
         {
             panels = Dock.Layout.Descendents().OfType<LayoutAnchorable>().ToDictionary(a => a.ContentId, a => (a.Title, a.Content));
             defaultLayout = SerializeLayout();
@@ -75,8 +61,19 @@ public partial class MainWindow : Window
             // Only once everything above is in place; recovered unsaved work takes precedence.
             if (startupProject is not null && !vm.IsDirty) OpenProject(Path.GetFullPath(startupProject));
             FocusMain();
+
+            // Update check after startup has settled; silent when offline.
+            await Task.Delay(TimeSpan.FromSeconds(5));
+            await vm.Update.CheckAsync(userInitiated: false);
         };
-        Closing += (_, e) => { if (!ConfirmDiscard()) e.Cancel = true; };
+        Closing += (_, e) =>
+        {
+            if (!ConfirmDiscard())
+            {
+                e.Cancel = true;
+                relaunchAfterUpdate = false;
+            }
+        };
         Closed += (_, _) =>
         {
             SaveLayout();
@@ -84,6 +81,8 @@ public partial class MainWindow : Window
             recovery.EndSession();
             shortcuts?.Dispose();
             vm.Dispose();
+            // A downloaded, verified update is installed now that EVSEQ has closed.
+            vm.Update.LaunchInstaller(relaunchAfterUpdate);
         };
     }
 

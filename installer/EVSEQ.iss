@@ -2,7 +2,7 @@
 #define AppShortName "EVSEQ"
 ; build.ps1 -Version passes /DAppVersion=x.y.z; this default is used for plain local builds
 #ifndef AppVersion
-  #define AppVersion "0.2.0"
+  #define AppVersion "0.3.0"
 #endif
 #define AppExe "EVSEQ.exe"
 
@@ -52,6 +52,94 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "Jalankan {#AppName}"; Flags: nowait postinstall skipifsilent
+; In-app "Pasang sekarang" runs this installer with /SILENT /RELAUNCH=1: reopen EVSEQ when done
+Filename: "{app}\{#AppExe}"; Flags: nowait runasoriginaluser; Check: RelaunchAfterUpdate
+
+[Code]
+{ Upgrade handling: an existing install (same AppId) turns this into a short update:
+  no license/folder/start-menu/task pages, a clear "update from -> to" message, refuse downgrades,
+  and wait for a running EVSEQ to close. }
+const
+  UninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{8F3C2A51-6B7D-4E2A-9C1F-3D5E7A9B0C12}_is1';
+  AppMutexName = 'AudioPlayer.SingleInstance';  { held by EVSEQ.exe while it runs (name kept from before the rename) }
+
+var
+  PreviousVersion: String;
+
+function GetPreviousVersion(): String;
+begin
+  Result := '';
+  if not RegQueryStringValue(HKLM64, UninstallKey, 'DisplayVersion', Result) then
+    if not RegQueryStringValue(HKLM32, UninstallKey, 'DisplayVersion', Result) then
+      RegQueryStringValue(HKCU, UninstallKey, 'DisplayVersion', Result);
+end;
+
+function IsUpgrade(): Boolean;
+begin
+  Result := PreviousVersion <> '';
+end;
+
+function InitializeSetup(): Boolean;
+var
+  Installed, Offered: Int64;
+  Tries: Integer;
+begin
+  Result := True;
+  PreviousVersion := GetPreviousVersion();
+
+  { Never replace a newer install with an older one. }
+  if IsUpgrade() and StrToVersion(PreviousVersion, Installed) and StrToVersion('{#AppVersion}', Offered)
+     and (ComparePackedVersion(Installed, Offered) > 0) then
+  begin
+    SuppressibleMsgBox('Versi EVSEQ yang terpasang (' + PreviousVersion + ') lebih baru dari installer ini ({#AppVersion}). Instalasi dibatalkan.',
+      mbError, MB_OK, IDOK);
+    Result := False;
+    Exit;
+  end;
+
+  { EVSEQ must be closed. When started from the app it is just exiting, so wait a moment. }
+  Tries := 0;
+  while CheckForMutexes(AppMutexName) do
+  begin
+    if WizardSilent() then
+    begin
+      if Tries >= 60 then begin Result := False; Exit; end;
+      Sleep(250);
+      Tries := Tries + 1;
+    end
+    else if MsgBox('EVSEQ masih berjalan. Simpan project dan tutup EVSEQ, lalu klik OK untuk melanjutkan.',
+                   mbInformation, MB_OKCANCEL) = IDCANCEL then
+    begin
+      Result := False;
+      Exit;
+    end;
+  end;
+end;
+
+procedure InitializeWizard();
+begin
+  if IsUpgrade() then
+    WizardForm.Caption := 'Update {#AppName} ' + PreviousVersion + ' -> {#AppVersion}';
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  { Settings chosen at first install (folder, Start Menu, desktop icon) are kept on update. }
+  Result := IsUpgrade() and ((PageID = wpLicense) or (PageID = wpSelectDir)
+    or (PageID = wpSelectProgramGroup) or (PageID = wpSelectTasks));
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if (CurPageID = wpReady) and IsUpgrade() then
+    WizardForm.ReadyLabel.Caption := 'EVSEQ akan diperbarui dari versi ' + PreviousVersion + ' ke {#AppVersion}.' + #13#10 + #13#10 +
+      'Project, daftar project terakhir, layout panel, dan pengaturan tidak berubah.';
+end;
+
+function RelaunchAfterUpdate(): Boolean;
+begin
+  Result := ExpandConstant('{param:relaunch|0}') = '1';
+end;
 
 [UninstallDelete]
 ; autosave, session lock, recent list and panel layout; the user's .approj project files are NOT touched

@@ -135,6 +135,13 @@ Di panel **MIDI** (tab di sebelah Aktivitas): pilih input controller, lalu klik 
 
 Setiap panel (Track List, Master, Transport MAIN, Cue / Preview, Aktivitas, MIDI) bisa di-drag lewat judulnya: dipindah ke sisi lain, ditumpuk menjadi tab, di-resize, atau dilepas ke jendela sendiri (misalnya di monitor kedua). Susunan diingat otomatis; **Reset layout** mengembalikan ke default.
 
+### 10. Update ke versi baru
+
+- **Otomatis dari aplikasi** (mulai v0.3.0): saat dibuka, EVSEQ memeriksa GitHub. Bila ada versi baru, installer-nya diunduh di latar belakang dan diverifikasi dengan SHA-256, lalu muncul pemberitahuan *"siap dipasang"*. Update dipasang **saat EVSEQ ditutup** — atau klik **Pasang sekarang** (EVSEQ menutup, memasang, lalu terbuka lagi). Pemutaran yang sedang berjalan tidak pernah diganggu, dan tanpa internet EVSEQ tetap berjalan seperti biasa.
+- **Manual**: unduh installer terbaru dari **Releases** dan jalankan. Installer mengenali versi yang terpasang dan langsung menjalankan **update** (bukan instalasi baru): halaman lisensi/folder/ikon dilewati, folder dan pilihan sebelumnya dipakai lagi, dan versi yang lebih lama tidak bisa menimpa yang lebih baru.
+- Project, daftar project terakhir, layout panel, dan pengaturan **tidak berubah** saat update.
+- Pemeriksaan otomatis bisa dimatikan di **Settings → Update**; di sana juga ada **Cek update sekarang** dan versi yang terpasang (juga terlihat di status bar).
+
 ## Build dari source
 
 Butuh [.NET SDK 10](https://dotnet.microsoft.com/download).

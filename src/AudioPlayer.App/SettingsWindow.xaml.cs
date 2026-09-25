@@ -16,6 +16,7 @@ public partial class SettingsWindow : Window
     {
         InitializeComponent();
         this.vm = vm;
+        UpdateSection.DataContext = vm.Update;
 
         var devices = vm.Devices.RenderDevices();
         MainDevice.ItemsSource = devices;
