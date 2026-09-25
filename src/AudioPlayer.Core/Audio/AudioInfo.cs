@@ -6,7 +6,7 @@ public static class AudioInfo
 {
     public static TimeSpan GetDuration(string path)
     {
-        using var r = new AudioFileReader(path);
+        using var r = AudioFiles.OpenReader(path);
         return r.TotalTime;
     }
 }

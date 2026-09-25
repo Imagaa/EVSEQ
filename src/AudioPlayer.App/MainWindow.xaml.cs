@@ -180,7 +180,7 @@ public partial class MainWindow : Window
         var dlg = new OpenFileDialog
         {
             Multiselect = true,
-            Filter = "Audio|*.wav;*.mp3;*.aif;*.aiff;*.flac|Semua file|*.*",
+            Filter = $"Audio|{string.Join(";", AudioFiles.Extensions.Select(e => "*" + e))}|Semua file|*.*",
         };
         if (dlg.ShowDialog(this) != true) return;
         vm.AddFiles(dlg.FileNames);

@@ -7,13 +7,13 @@ namespace AudioPlayer.Core.Audio;
 public sealed class TrackVoice : ISampleProvider, IDisposable
 {
     private readonly Lock gate = new(); // Read (audio thread) vs. Seek/SetRange (UI thread)
-    private readonly AudioFileReader reader;
+    private readonly WaveStream reader;
     private readonly LoopingReader looper;
     private readonly SmoothGainSampleProvider volume;
 
     public TrackVoice(string path, WaveFormat busFormat, float volume = 1f)
     {
-        reader = new AudioFileReader(path);
+        reader = AudioFiles.OpenReader(path);
         looper = new LoopingReader(reader);
 
         ISampleProvider chain = looper;

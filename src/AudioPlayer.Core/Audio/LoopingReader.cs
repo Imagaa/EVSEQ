@@ -3,8 +3,11 @@ using NAudio.Wave;
 namespace AudioPlayer.Core.Audio;
 
 /// <summary>Plays the file between Start and End (end of file when null), optionally looping back to Start.</summary>
-public sealed class LoopingReader(AudioFileReader reader) : ISampleProvider
+/// <param name="reader">A float stream that is also an ISampleProvider (see AudioFiles.OpenReader).</param>
+public sealed class LoopingReader(WaveStream reader) : ISampleProvider
 {
+    private readonly ISampleProvider samples = (ISampleProvider)reader;
+
     public bool Loop { get; set; }
     public TimeSpan Start { get; set; }
     public TimeSpan? End { get; set; }
@@ -25,7 +28,7 @@ public sealed class LoopingReader(AudioFileReader reader) : ISampleProvider
                 want = (int)Math.Min(want, Math.Max(0, left));
             }
 
-            int n = want > 0 ? reader.Read(buffer.Slice(total, want)) : 0;
+            int n = want > 0 ? samples.Read(buffer.Slice(total, want)) : 0;
             if (n == 0)
             {
                 if (!Loop || reader.Length == 0 || wrapped) break;

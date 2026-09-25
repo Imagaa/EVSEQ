@@ -10,7 +10,8 @@ public static class Waveform
     /// </summary>
     public static float[] ComputePeaks(string path, int buckets = 2000, CancellationToken ct = default)
     {
-        using var reader = new AudioFileReader(path);
+        using var reader = AudioFiles.OpenReader(path);
+        var samples = (ISampleProvider)reader;
         long totalSamples = reader.Length / (reader.WaveFormat.BitsPerSample / 8);
         var peaks = new float[buckets];
         if (totalSamples == 0) return peaks;
@@ -19,7 +20,7 @@ public static class Waveform
         var buffer = new float[reader.WaveFormat.SampleRate * reader.WaveFormat.Channels]; // ~1 s per read
         long index = 0;
         int n;
-        while ((n = reader.Read(buffer)) > 0)
+        while ((n = samples.Read(buffer)) > 0)
         {
             ct.ThrowIfCancellationRequested();
             for (int i = 0; i < n; i++, index++)
