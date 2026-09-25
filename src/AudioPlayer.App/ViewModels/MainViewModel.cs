@@ -112,6 +112,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Status = string.Join("  ", notes);
     }
 
+    public void PlayNumber(int number)
+    {
+        if (number < 1 || number > Tracks.Count) return;
+        var t = Tracks[number - 1];
+        Selected = t;
+        Run(t, x => Engine.Play(x.Track));
+    }
+
     public void ApplySettings(string? mainDeviceId, string? monitorDeviceId, FadeSettings fade)
     {
         bool devicesChanged = mainDeviceId != Project.MainDeviceId || monitorDeviceId != Project.MonitorDeviceId;

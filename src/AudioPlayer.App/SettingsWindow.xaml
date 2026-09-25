@@ -29,7 +29,17 @@
             <ComboBox x:Name="Curve" Width="110" Margin="6,0,0,0"/>
         </StackPanel>
 
-        <StackPanel x:Name="ShortcutsHost"/>
+        <TextBlock Text="Shortcut" FontWeight="Bold"/>
+        <TextBlock Foreground="Gray" Margin="0,2,0,4" TextWrapping="Wrap"
+                   Text="Format: Ctrl+Alt+D1, Shift+F5, Space, F12. Angka ditulis D1..D9. Track # hanya untuk PlayTrack. Global = aktif walau jendela tidak fokus."/>
+        <DataGrid x:Name="Shortcuts" AutoGenerateColumns="False" Height="240" CanUserAddRows="True" CanUserDeleteRows="True">
+            <DataGrid.Columns>
+                <DataGridComboBoxColumn x:Name="ActionColumn" Header="Aksi" SelectedItemBinding="{Binding Action}" Width="170"/>
+                <DataGridTextColumn Header="Tombol" Binding="{Binding Gesture}" Width="150"/>
+                <DataGridTextColumn Header="Track #" Binding="{Binding TrackNumber, TargetNullValue=''}" Width="70"/>
+                <DataGridCheckBoxColumn Header="Global" Binding="{Binding Global}" Width="60"/>
+            </DataGrid.Columns>
+        </DataGrid>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
             <Button Content="OK" Width="80" IsDefault="True" Click="Ok_Click"/>

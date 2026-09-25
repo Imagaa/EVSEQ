@@ -1,4 +1,6 @@
+using System.Collections.ObjectModel;
 using System.Windows;
+using AudioPlayer.App.Input;
 using AudioPlayer.App.ViewModels;
 using AudioPlayer.Core.Audio;
 using AudioPlayer.Core.Model;
@@ -8,6 +10,7 @@ namespace AudioPlayer.App;
 public partial class SettingsWindow : Window
 {
     private readonly MainViewModel vm;
+    private readonly ObservableCollection<ShortcutRow> rows;
 
     public SettingsWindow(MainViewModel vm)
     {
@@ -25,6 +28,11 @@ public partial class SettingsWindow : Window
         FadeOut.Text = fade.FadeOutMs.ToString();
         Curve.ItemsSource = Enum.GetValues<FadeCurve>();
         Curve.SelectedItem = fade.Curve;
+
+        ActionColumn.ItemsSource = Enum.GetValues<ShortcutAction>();
+        rows = new ObservableCollection<ShortcutRow>(vm.Project.Shortcuts.Select(s =>
+            new ShortcutRow { Action = s.Action, Gesture = s.Gesture, TrackNumber = s.TrackNumber, Global = s.Global }));
+        Shortcuts.ItemsSource = rows;
     }
 
     private void Ok_Click(object sender, RoutedEventArgs e)
@@ -42,10 +50,34 @@ public partial class SettingsWindow : Window
                 "Peringatan", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
             return;
 
+        var problems = new List<string>();
+        foreach (var r in rows)
+        {
+            if (!Gesture.TryParse(r.Gesture, out _)) problems.Add($"Tombol tidak valid: '{r.Gesture}'");
+            if (r.Action == ShortcutAction.PlayTrack && r.TrackNumber is not > 0) problems.Add($"'{r.Gesture}': PlayTrack butuh Track # ≥ 1");
+        }
+        problems.AddRange(rows.GroupBy(r => r.Gesture.Replace(" ", "").ToLowerInvariant())
+            .Where(g => g.Count() > 1).Select(g => $"Tombol dipakai lebih dari sekali: '{g.First().Gesture}'"));
+        if (problems.Count > 0)
+        {
+            MessageBox.Show(this, string.Join("\n", problems), "Shortcut", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        vm.Project.Shortcuts = rows.Select(r =>
+            new ShortcutBinding(r.Action, r.Gesture.Trim(), r.Global, r.Action == ShortcutAction.PlayTrack ? r.TrackNumber : null)).ToList();
+
         vm.ApplySettings(mainId, monitorId,
             new FadeSettings { FadeInMs = fadeIn, FadeOutMs = fadeOut, Curve = (FadeCurve)Curve.SelectedItem });
         DialogResult = true;
     }
 
     private static bool TryMs(string text, out int ms) => int.TryParse(text, out ms) && ms is >= 0 and <= 10000;
+}
+
+public sealed class ShortcutRow
+{
+    public ShortcutAction Action { get; set; }
+    public string Gesture { get; set; } = "";
+    public int? TrackNumber { get; set; }
+    public bool Global { get; set; }
 }
