@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using AudioPlayer.App.Input;
 using AudioPlayer.App.ViewModels;
+using AudioPlayer.Core.Audio;
 using AudioPlayer.Core.Model;
 using Microsoft.Win32;
 
@@ -14,9 +15,12 @@ public partial class MainWindow : Window
 {
     private const string ProjectFilter = "Project Audio Player (*.approj)|*.approj";
 
+    private static readonly string AppDataDir =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AudioPlayer");
+
     private readonly MainViewModel vm = new();
-    private readonly SessionRecovery recovery =
-        new(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AudioPlayer"));
+    private readonly SessionRecovery recovery = new(AppDataDir);
+    private readonly RecentProjects recent = new(Path.Combine(AppDataDir, "recent.json"));
     private readonly DispatcherTimer autosave = new() { Interval = TimeSpan.FromSeconds(60) };
     private ShortcutDispatcher? shortcuts;
 
@@ -33,7 +37,8 @@ public partial class MainWindow : Window
 
             shortcuts = new ShortcutDispatcher(this, vm);
             ReloadShortcuts();
-            TrackList.Focus();
+            RefreshRecent();
+            FocusMain();
         };
         Closing += (_, e) => { if (!ConfirmDiscard()) e.Cancel = true; };
         Closed += (_, _) =>
@@ -58,7 +63,70 @@ public partial class MainWindow : Window
             Multiselect = true,
             Filter = "Audio|*.wav;*.mp3;*.aif;*.aiff;*.flac|Semua file|*.*",
         };
-        if (dlg.ShowDialog(this) == true) vm.AddFiles(dlg.FileNames);
+        if (dlg.ShowDialog(this) != true) return;
+        vm.AddFiles(dlg.FileNames);
+        FocusMain();
+    }
+
+    private void AddFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new OpenFolderDialog { Title = "Pilih folder berisi file audio" };
+        if (dlg.ShowDialog(this) != true) return;
+        try
+        {
+            var files = AudioFiles.InFolder(dlg.FolderName).ToList();
+            if (files.Count == 0)
+            {
+                vm.Status = $"Tidak ada file audio ({string.Join(", ", AudioFiles.Extensions)}) di folder itu.";
+                return;
+            }
+            vm.AddFiles(files);
+            FocusMain();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            vm.Status = $"Gagal membaca folder: {ex.Message}";
+        }
+    }
+
+    private void OpenRecent_Click(object sender, RoutedEventArgs e)
+    {
+        if (ConfirmDiscard()) OpenProject((string)((FrameworkElement)sender).Tag);
+    }
+
+    private void RefreshRecent()
+    {
+        var items = recent.Load()
+            .Select(p => new { Name = Path.GetFileNameWithoutExtension(p), Folder = Path.GetDirectoryName(p), Path = p })
+            .ToList();
+        RecentList.ItemsSource = items;
+        NoRecent.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>Keyboard focus on the welcome screen when it is showing, otherwise on the track list.</summary>
+    private void FocusMain()
+    {
+        if (vm.ShowWelcome)
+        {
+            WelcomeAddFiles.Focus();
+            return;
+        }
+        vm.Selected ??= vm.Tracks[0];
+        TrackList.UpdateLayout();
+        (TrackList.ItemContainerGenerator.ContainerFromItem(vm.Selected) as UIElement ?? TrackList).Focus();
+    }
+
+    private void RememberRecent(string path)
+    {
+        try
+        {
+            recent.Add(path);
+            RefreshRecent();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // the recent list is a convenience; never fail a save/open over it
+        }
     }
 
     private void Settings_Click(object sender, RoutedEventArgs e)
@@ -71,17 +139,25 @@ public partial class MainWindow : Window
         if (!ConfirmDiscard()) return;
         vm.Load(new Project(), null);
         ReloadShortcuts();
+        RefreshRecent();
+        FocusMain();
     }
 
     private void Open_Executed(object sender, ExecutedRoutedEventArgs e)
     {
         if (!ConfirmDiscard()) return;
         var dlg = new OpenFileDialog { Filter = ProjectFilter };
-        if (dlg.ShowDialog(this) != true) return;
+        if (dlg.ShowDialog(this) == true) OpenProject(dlg.FileName);
+    }
+
+    private void OpenProject(string path)
+    {
         try
         {
-            vm.Load(ProjectSerializer.Load(dlg.FileName), dlg.FileName);
+            vm.Load(ProjectSerializer.Load(path), path);
             ReloadShortcuts();
+            RememberRecent(path);
+            FocusMain();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidDataException)
         {
@@ -108,6 +184,7 @@ public partial class MainWindow : Window
             ProjectSerializer.Save(vm.Project, path);
             vm.MarkSaved(path);
             recovery.DiscardAutosave();
+            RememberRecent(path);
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

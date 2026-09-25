@@ -8,6 +8,9 @@
         <CommandBinding Command="Save" Executed="Save_Executed"/>
         <CommandBinding Command="SaveAs" Executed="SaveAs_Executed"/>
     </Window.CommandBindings>
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+    </Window.Resources>
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File" x:Name="FileMenu">
@@ -17,6 +20,7 @@
                 <MenuItem Command="SaveAs" Header="Simpan _sebagai..."/>
                 <Separator/>
                 <MenuItem Header="_Tambah file audio..." Click="AddFiles_Click"/>
+                <MenuItem Header="Tambah _folder audio..." Click="AddFolder_Click"/>
                 <Separator/>
                 <MenuItem Header="_Keluar" Click="Exit_Click"/>
             </MenuItem>
@@ -74,6 +78,7 @@
                     ToolTip="Stop semua track Main &amp; Monitor seketika"/>
         </Grid>
 
+        <Grid>
         <ListView x:Name="TrackList" ItemsSource="{Binding Tracks}" SelectedItem="{Binding Selected}">
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">
@@ -145,5 +150,51 @@
                 </GridView>
             </ListView.View>
         </ListView>
+
+        <!-- Welcome screen: covers the list while it is empty -->
+        <Border Background="White" Visibility="{Binding ShowWelcome, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel Width="560" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="Audio Player" FontSize="32" FontWeight="Bold"/>
+                <TextBlock Text="Mulai dengan menambahkan track, atau buka project yang sudah disimpan." Foreground="Gray" Margin="0,4,0,20"/>
+
+                <UniformGrid Columns="3" Margin="0,0,0,28">
+                    <Button x:Name="WelcomeAddFiles" Click="AddFiles_Click" Padding="12" Margin="0,0,8,0">
+                        <StackPanel>
+                            <TextBlock Text="＋ Tambah track" FontWeight="Bold" FontSize="14"/>
+                            <TextBlock Text="Pilih file audio" Foreground="Gray"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Click="AddFolder_Click" Padding="12" Margin="4,0">
+                        <StackPanel>
+                            <TextBlock Text="＋ Tambah folder" FontWeight="Bold" FontSize="14"/>
+                            <TextBlock Text="Semua audio di folder" Foreground="Gray"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Command="Open" Padding="12" Margin="8,0,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Buka project" FontWeight="Bold" FontSize="14"/>
+                            <TextBlock Text="File .approj (Ctrl+O)" Foreground="Gray"/>
+                        </StackPanel>
+                    </Button>
+                </UniformGrid>
+
+                <TextBlock Text="Project terakhir" FontWeight="Bold" Margin="0,0,0,6"/>
+                <TextBlock x:Name="NoRecent" Text="Belum ada project yang disimpan." Foreground="Gray"/>
+                <ItemsControl x:Name="RecentList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Click="OpenRecent_Click" Tag="{Binding Path}" HorizontalContentAlignment="Left"
+                                    Background="Transparent" BorderThickness="0" Padding="6,4" Cursor="Hand" ToolTip="{Binding Path}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" FontSize="14" Foreground="#1565C0"/>
+                                    <TextBlock Text="{Binding Folder}" Foreground="Gray" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+        </Grid>
     </DockPanel>
 </Window>

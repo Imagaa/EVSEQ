@@ -22,6 +22,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             Application.Current.Dispatcher.InvokeAsync(() => OnDeviceUnavailable(id));
         Engine.Main.PlaybackFailed += (_, ex) => BusFailed(BusKind.Main, ex.Message);
         Engine.Monitor.PlaybackFailed += (_, ex) => BusFailed(BusKind.Monitor, ex.Message);
+        Tracks.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ShowWelcome));
         Load(new Project(), null);
         timer.Tick += (_, _) => Tick();
         timer.Start();
@@ -32,6 +33,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public Project Project { get; private set; } = new();
     public string? ProjectPath { get; private set; }
     public ObservableCollection<TrackViewModel> Tracks { get; } = [];
+
+    /// <summary>The welcome screen replaces the empty track list.</summary>
+    public bool ShowWelcome => Tracks.Count == 0;
 
     [ObservableProperty] public partial TrackViewModel? Selected { get; set; }
     [ObservableProperty] public partial string Status { get; set; } = "";

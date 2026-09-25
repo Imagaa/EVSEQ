@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using AudioPlayer.App.ViewModels;
 using AudioPlayer.Core.Model;
@@ -63,7 +64,8 @@ public sealed class ShortcutDispatcher : IDisposable
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.OriginalSource is TextBox) return; // never hijack typing
+        // never hijack typing, and let focused buttons (welcome screen) take Enter/Space
+        if (e.OriginalSource is TextBox or ButtonBase) return;
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
         foreach (var (g, b) in local)
         {
