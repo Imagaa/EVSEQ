@@ -34,6 +34,7 @@ public sealed partial class SeekBarViewModel(PlayerEngine engine, BusKind bus) :
     [ObservableProperty] public partial double FadeOut { get; set; }
     [ObservableProperty] public partial bool ShowFadeOut { get; set; }
     [ObservableProperty] public partial AudioPlayer.Core.Audio.FadeCurve Curve { get; set; }
+    [ObservableProperty] public partial float[]? Peaks { get; set; }
 
     [ObservableProperty, NotifyPropertyChangedFor(nameof(RangeText))] public partial bool HasTrack { get; set; }
     [ObservableProperty] public partial string Title { get; set; } = "—";
@@ -114,6 +115,7 @@ public sealed partial class SeekBarViewModel(PlayerEngine engine, BusKind bus) :
             Duration = 1;
             RangeStart = RangeEnd = 0;
             ElapsedText = RemainingText = "";
+            Peaks = null;
             OnPropertyChanged(nameof(Position));
             OnPropertyChanged(nameof(RangeText));
             return;
@@ -128,6 +130,7 @@ public sealed partial class SeekBarViewModel(PlayerEngine engine, BusKind bus) :
         }
         FadeIn = t.FadeInSeconds;
         FadeOut = t.FadeOutSeconds;
+        Peaks = t.Peaks;
         // The engine only auto-fades before an end point; while dragging, preview what the new point will do.
         ShowFadeOut = IsEditingRange ? RangeEnd < Duration - 0.05 : t.Track.EndMs is not null;
         Curve = t.Curve;

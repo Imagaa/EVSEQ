@@ -54,6 +54,9 @@ public sealed partial class TrackViewModel : ObservableObject
 
     [ObservableProperty] public partial int Number { get; set; }
 
+    /// <summary>Waveform peaks, filled in by a background job; null until ready or when unreadable.</summary>
+    [ObservableProperty] public partial float[]? Peaks { get; set; }
+
     [ObservableProperty, NotifyPropertyChangedFor(nameof(PlayLabel))]
     public partial PlayState MainState { get; set; }
 

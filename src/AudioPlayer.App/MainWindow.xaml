@@ -405,7 +405,7 @@
                                                            Duration="{Binding MainBar.Duration}" Position="{Binding MainBar.Position}" IsScrubbing="{Binding MainBar.IsDragging}" IsEditingRange="{Binding MainBar.IsEditingRange}"
                                                            IsEnabled="{Binding MainBar.HasTrack}" RangeStart="{Binding MainBar.RangeStart}" RangeEnd="{Binding MainBar.RangeEnd}"
                                                            FadeIn="{Binding MainBar.FadeIn}" FadeOut="{Binding MainBar.FadeOut}" ShowFadeOut="{Binding MainBar.ShowFadeOut}"
-                                                           Curve="{Binding MainBar.Curve}" ToolTip="Klik/geser untuk pindah posisi di Main"/>
+                                                           Curve="{Binding MainBar.Curve}" Peaks="{Binding MainBar.Peaks}" ToolTip="Klik/geser untuk pindah posisi di Main"/>
                                         </DockPanel>
                                         <WrapPanel>
                                             <StackPanel Orientation="Horizontal" Margin="0,4,18,0">
@@ -441,7 +441,7 @@
                                                            Duration="{Binding CueBar.Duration}" Position="{Binding CueBar.Position}" IsScrubbing="{Binding CueBar.IsDragging}" IsEditingRange="{Binding CueBar.IsEditingRange}"
                                                            IsEnabled="{Binding CueBar.HasTrack}" RangeStart="{Binding CueBar.RangeStart}" RangeEnd="{Binding CueBar.RangeEnd}"
                                                            FadeIn="{Binding CueBar.FadeIn}" FadeOut="{Binding CueBar.FadeOut}" ShowFadeOut="{Binding CueBar.ShowFadeOut}"
-                                                           Curve="{Binding CueBar.Curve}" ToolTip="Klik/geser untuk pindah posisi preview atau memilih titik start/end"/>
+                                                           Curve="{Binding CueBar.Curve}" Peaks="{Binding CueBar.Peaks}" ToolTip="Klik/geser untuk pindah posisi preview atau memilih titik start/end"/>
                                         </DockPanel>
                                         <WrapPanel>
                                             <StackPanel Orientation="Horizontal" Margin="0,4,18,0">

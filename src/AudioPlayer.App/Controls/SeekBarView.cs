@@ -22,6 +22,8 @@ public sealed class SeekBarView : FrameworkElement
         new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsRender | FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
     public static readonly DependencyProperty RangeEndProperty = DependencyProperty.Register(nameof(RangeEnd), typeof(double), typeof(SeekBarView),
         new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsRender | FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+    public static readonly DependencyProperty PeaksProperty = DependencyProperty.Register(nameof(Peaks), typeof(float[]), typeof(SeekBarView),
+        new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
     public static readonly DependencyProperty IsEditingRangeProperty = DependencyProperty.Register(nameof(IsEditingRange), typeof(bool), typeof(SeekBarView),
         new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
     public static readonly DependencyProperty FadeInProperty = DependencyProperty.Register(nameof(FadeIn), typeof(double), typeof(SeekBarView), Render(0));
@@ -45,6 +47,9 @@ public sealed class SeekBarView : FrameworkElement
     public FadeCurve Curve { get => (FadeCurve)GetValue(CurveProperty); set => SetValue(CurveProperty, value); }
     public Brush Accent { get => (Brush)GetValue(AccentProperty); set => SetValue(AccentProperty, value); }
 
+    /// <summary>Waveform peaks (0..1) evenly spread over the whole file; null draws the envelope only.</summary>
+    public float[]? Peaks { get => (float[]?)GetValue(PeaksProperty); set => SetValue(PeaksProperty, value); }
+
     /// <summary>True while the user drags; the view model seeks once when it turns false.</summary>
     public bool IsScrubbing { get => (bool)GetValue(IsScrubbingProperty); set => SetValue(IsScrubbingProperty, value); }
 
@@ -62,6 +67,7 @@ public sealed class SeekBarView : FrameworkElement
     private static readonly Brush Groove = Frozen(Color.FromRgb(0x17, 0x17, 0x1B));
     private static readonly Brush Outside = Frozen(Color.FromArgb(0xB0, 0x0E, 0x0E, 0x10));
     private static readonly Brush MarkerBrush = Frozen(Color.FromRgb(0xEC, 0xEC, 0xEF));
+    private static readonly Brush Unplayed = Frozen(Color.FromRgb(0x6B, 0x6B, 0x78));
     private static readonly Brush LabelBg = Frozen(Color.FromArgb(0xE6, 0x2D, 0x2D, 0x30));
     private static readonly Pen PlayheadPen = FrozenPen(Brushes.White, 2);
     private static readonly Pen HoverPen = FrozenPen(new SolidColorBrush(Color.FromArgb(0x90, 0xFF, 0xFF, 0xFF)), 1);
@@ -87,18 +93,35 @@ public sealed class SeekBarView : FrameworkElement
         double start = Math.Clamp(RangeStart, 0, Duration);
         double end = Math.Clamp(RangeEnd <= start ? Duration : RangeEnd, start, Duration);
 
-        // Envelope inside the range: rise over fade-in, flat, fall over fade-out.
         var accent = Accent;
-        var envelope = Envelope(X, start, end, top + 3, bottom - 1);
-        dc.PushOpacity(0.28);
-        dc.DrawGeometry(accent, null, envelope);
-        dc.Pop();
-        dc.PushClip(new RectangleGeometry(new Rect(X(start), 0, Math.Max(0, X(Position) - X(start)), h)));
-        dc.PushOpacity(0.85);
-        dc.DrawGeometry(accent, null, envelope);
-        dc.Pop();
-        dc.Pop();
-        dc.DrawGeometry(null, new Pen(accent, 1.2), envelope);
+        var played = new RectangleGeometry(new Rect(X(start), 0, Math.Max(0, X(Position) - X(start)), h));
+        if (Peaks is { Length: > 0 } peaks)
+        {
+            // Waveform shaped by the fade envelope: what the audience actually hears.
+            var wave = WaveGeometry(peaks, w, start, end, top + 2, bottom - 2);
+            dc.DrawGeometry(Unplayed, null, wave);
+            dc.PushClip(played);
+            dc.DrawGeometry(accent, null, wave);
+            dc.Pop();
+            var outline = new Pen(accent, 1) { DashStyle = null };
+            dc.PushOpacity(0.75);
+            dc.DrawGeometry(null, outline, EnvelopeOutline(X, start, end, top + 2, bottom - 2));
+            dc.Pop();
+        }
+        else
+        {
+            // No waveform yet (still decoding / unreadable): filled envelope only.
+            var envelope = Envelope(X, start, end, top + 3, bottom - 1);
+            dc.PushOpacity(0.28);
+            dc.DrawGeometry(accent, null, envelope);
+            dc.Pop();
+            dc.PushClip(played);
+            dc.PushOpacity(0.85);
+            dc.DrawGeometry(accent, null, envelope);
+            dc.Pop();
+            dc.Pop();
+            dc.DrawGeometry(null, new Pen(accent, 1.2), envelope);
+        }
 
         // Outside the start/end range
         if (start > 0) dc.DrawRectangle(Outside, null, new Rect(0, top, X(start), bottom - top));
@@ -123,6 +146,68 @@ public sealed class SeekBarView : FrameworkElement
             dc.DrawRoundedRectangle(LabelBg, null, new Rect(lx, 0, text.Width + 6, 13), 2, 2);
             dc.DrawText(text, new Point(lx + 3, -1));
         }
+    }
+
+    /// <summary>Envelope gain (0..1) at time t: the same curve the engine applies.</summary>
+    private double EnvelopeGain(double t, double start, double end)
+    {
+        double len = end - start;
+        double fin = Math.Min(Math.Max(0, FadeIn), len);
+        double fout = ShowFadeOut ? Math.Min(Math.Max(0, FadeOut), len - fin) : 0;
+        if (t < start || t > end) return 1; // outside the range: shown dimmed, unshaped
+        if (fin > 0 && t < start + fin) return FadeCurves.Shape(Curve, (float)((t - start) / fin), rising: true);
+        if (fout > 0 && t > end - fout) return 1 - FadeCurves.Shape(Curve, (float)((t - (end - fout)) / fout), rising: false);
+        return 1;
+    }
+
+    /// <summary>Symmetric waveform, one column per pixel, amplitude = peak × envelope gain.</summary>
+    private StreamGeometry WaveGeometry(float[] peaks, double w, double start, double end, double top, double bottom)
+    {
+        double center = (top + bottom) / 2, half = (bottom - top) / 2;
+        int cols = Math.Max(1, (int)w);
+        var amp = new double[cols];
+        for (int c = 0; c < cols; c++)
+        {
+            int b0 = (int)((double)c / cols * peaks.Length);
+            int b1 = Math.Max(b0 + 1, (int)((double)(c + 1) / cols * peaks.Length));
+            float p = 0;
+            for (int b = b0; b < b1 && b < peaks.Length; b++) p = Math.Max(p, peaks[b]);
+            double t = (c + 0.5) / cols * Duration;
+            amp[c] = Math.Max(0.5, p * EnvelopeGain(t, start, end) * half); // keep a hairline for silence
+        }
+
+        var g = new StreamGeometry();
+        using (var ctx = g.Open())
+        {
+            ctx.BeginFigure(new Point(0, center - amp[0]), true, true);
+            for (int c = 1; c < cols; c++) ctx.LineTo(new Point(c, center - amp[c]), true, false);
+            for (int c = cols - 1; c >= 0; c--) ctx.LineTo(new Point(c, center + amp[c]), true, false);
+        }
+        g.Freeze();
+        return g;
+    }
+
+    /// <summary>The fade curve drawn as a thin mirrored line over the waveform.</summary>
+    private StreamGeometry EnvelopeOutline(Func<double, double> x, double start, double end, double top, double bottom)
+    {
+        double center = (top + bottom) / 2, half = (bottom - top) / 2;
+        const int steps = 120;
+        var g = new StreamGeometry();
+        using (var c = g.Open())
+        {
+            for (int side = -1; side <= 1; side += 2)
+            {
+                c.BeginFigure(new Point(x(start), center), false, false);
+                for (int i = 0; i <= steps; i++)
+                {
+                    double t = start + (end - start) * i / steps;
+                    c.LineTo(new Point(x(t), center + side * EnvelopeGain(t, start, end) * half), true, false);
+                }
+                c.LineTo(new Point(x(end), center), true, false);
+            }
+        }
+        g.Freeze();
+        return g;
     }
 
     private StreamGeometry Envelope(Func<double, double> x, double start, double end, double top, double bottom)

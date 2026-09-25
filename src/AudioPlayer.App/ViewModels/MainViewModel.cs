@@ -24,10 +24,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             Application.Current.Dispatcher.InvokeAsync(() => OnDeviceUnavailable(id));
         Engine.Main.PlaybackFailed += (_, ex) => BusFailed(BusKind.Main, ex.Message);
         Engine.Monitor.PlaybackFailed += (_, ex) => BusFailed(BusKind.Monitor, ex.Message);
-        Tracks.CollectionChanged += (_, _) =>
+        Tracks.CollectionChanged += (_, e) =>
         {
             OnPropertyChanged(nameof(ShowWelcome));
             NotifyShortcutsChanged(); // per-track shortcuts follow their tracks
+            if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
+                foreach (TrackViewModel t in e.NewItems!) LoadWaveform(t);
         };
         Load(new Project(), null);
         timer.Tick += (_, _) => Tick();
@@ -148,6 +150,31 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public void MarkDirty() => IsDirty = true;
 
     public void RangesChanged() => Renumber();
+
+    // One file decoded at a time so waveform work never competes with playback for CPU.
+    // ponytail: peaks recomputed every time a project opens; add a disk cache if big libraries load slowly
+    private readonly SemaphoreSlim waveformGate = new(1);
+
+    private async void LoadWaveform(TrackViewModel t)
+    {
+        if (t.IsMissing) return;
+        await waveformGate.WaitAsync();
+        try
+        {
+            if (!Tracks.Contains(t)) return; // removed or project closed while queued
+            var path = t.Track.FilePath;
+            t.Peaks = await Task.Run(() => Waveform.ComputePeaks(path));
+        }
+        catch (Exception ex)
+        {
+            // display-only data: a file NAudio cannot decode simply gets no waveform
+            Log($"Waveform {t.Title} tidak bisa dibuat: {ex.Message}", ActivityKind.Warning);
+        }
+        finally
+        {
+            waveformGate.Release();
+        }
+    }
 
     // Start/end points are set on the cue bar's track at the cue bar's position.
     [RelayCommand]
