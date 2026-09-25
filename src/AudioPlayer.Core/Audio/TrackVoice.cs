@@ -44,7 +44,18 @@ public sealed class TrackVoice : ISampleProvider, IDisposable
 
     public TimeSpan Remaining => Duration - Position;
 
-    public int Read(Span<float> buffer) => volume.Read(buffer);
+    /// <summary>Once set and the fade-out has finished, outputs silence without advancing the file.</summary>
+    public volatile bool Paused;
+
+    public int Read(Span<float> buffer)
+    {
+        if (Paused && !Fader.IsFading)
+        {
+            buffer.Clear();
+            return buffer.Length;
+        }
+        return volume.Read(buffer);
+    }
 
     public void Dispose() => reader.Dispose();
 }
