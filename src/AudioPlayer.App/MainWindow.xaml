@@ -29,19 +29,28 @@
             <Setter Property="ToolTip" Value="Shortcut: klik lalu tekan tombol. Backspace = hapus, Esc = batal."/>
             <EventSetter Event="PreviewKeyDown" Handler="ShortcutBox_PreviewKeyDown"/>
         </Style>
-        <!-- Grey default value shown inside an empty fade box (the TextBox sibling is named "Box") -->
-        <Style x:Key="DefaultHint" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource Ap.SubText}"/>
-            <Setter Property="FontStyle" Value="Italic"/>
-            <Setter Property="Margin" Value="11,0,0,0"/>
+        <!-- Fade value label: grey italic while the track follows the project default (Tag = IsDefault) -->
+        <Style x:Key="FadeLabel" TargetType="TextBlock">
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Margin" Value="6,0,0,0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="IsHitTestVisible" Value="False"/>
-            <Setter Property="Visibility" Value="Collapsed"/>
+            <Setter Property="TextAlignment" Value="Right"/>
             <Style.Triggers>
-                <DataTrigger Binding="{Binding Text, ElementName=Box}" Value="">
-                    <Setter Property="Visibility" Value="Visible"/>
-                </DataTrigger>
+                <Trigger Property="Tag" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource Ap.SubText}"/>
+                    <Setter Property="FontStyle" Value="Italic"/>
+                </Trigger>
             </Style.Triggers>
+        </Style>
+        <Style x:Key="ResetButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Margin" Value="4,0,0,0"/>
+            <Setter Property="ToolTip" Value="Kembali ke default dari Settings"/>
         </Style>
         <Style x:Key="PanelTitle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="18"/>
@@ -226,23 +235,27 @@
                                                         <DataTemplate><CheckBox IsChecked="{Binding Overlay}" Focusable="False" MinWidth="0" ToolTip="Main di atas track lain tanpa menghentikannya (jingle/SFX)"/></DataTemplate>
                                                     </GridViewColumn.CellTemplate>
                                                 </GridViewColumn>
-                                                <GridViewColumn Header="Fade in (s)" Width="86">
+                                                <GridViewColumn Header="Fade in" Width="170">
                                                     <GridViewColumn.CellTemplate>
                                                         <DataTemplate>
-                                                            <Grid ToolTip="Fade-in dalam detik, mis. 0.5. Kosongkan untuk memakai default dari Settings.">
-                                                                <TextBox x:Name="Box" Text="{Binding FadeInText, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}" Width="66" MinWidth="0"/>
-                                                                <TextBlock Text="{Binding DefaultFadeIn}" Style="{StaticResource DefaultHint}"/>
-                                                            </Grid>
+                                                            <StackPanel Orientation="Horizontal" ToolTip="Fade-in. Abu-abu miring = memakai default dari Settings; ↺ = kembali ke default.">
+                                                                <Slider Style="{StaticResource Ap.FadeSlider}" Value="{Binding FadeInSeconds}"/>
+                                                                <TextBlock Text="{Binding FadeInSeconds, StringFormat={}{0:0.0} s}" Tag="{Binding FadeInIsDefault}" Style="{StaticResource FadeLabel}"/>
+                                                                <Button Content="↺" Command="{Binding ResetFadeInCommand}" Style="{StaticResource ResetButton}"
+                                                                        Visibility="{Binding FadeInIsDefault, Converter={StaticResource InverseBoolToVisibility}}"/>
+                                                            </StackPanel>
                                                         </DataTemplate>
                                                     </GridViewColumn.CellTemplate>
                                                 </GridViewColumn>
-                                                <GridViewColumn Header="Fade out (s)" Width="90">
+                                                <GridViewColumn Header="Fade out" Width="170">
                                                     <GridViewColumn.CellTemplate>
                                                         <DataTemplate>
-                                                            <Grid ToolTip="Fade-out dalam detik, mis. 2. Kosongkan untuk memakai default dari Settings.">
-                                                                <TextBox x:Name="Box" Text="{Binding FadeOutText, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}" Width="66" MinWidth="0"/>
-                                                                <TextBlock Text="{Binding DefaultFadeOut}" Style="{StaticResource DefaultHint}"/>
-                                                            </Grid>
+                                                            <StackPanel Orientation="Horizontal" ToolTip="Fade-out (stop, pause, dan menjelang end point). Abu-abu miring = default; ↺ = kembali ke default.">
+                                                                <Slider Style="{StaticResource Ap.FadeSlider}" Value="{Binding FadeOutSeconds}"/>
+                                                                <TextBlock Text="{Binding FadeOutSeconds, StringFormat={}{0:0.0} s}" Tag="{Binding FadeOutIsDefault}" Style="{StaticResource FadeLabel}"/>
+                                                                <Button Content="↺" Command="{Binding ResetFadeOutCommand}" Style="{StaticResource ResetButton}"
+                                                                        Visibility="{Binding FadeOutIsDefault, Converter={StaticResource InverseBoolToVisibility}}"/>
+                                                            </StackPanel>
                                                         </DataTemplate>
                                                     </GridViewColumn.CellTemplate>
                                                 </GridViewColumn>

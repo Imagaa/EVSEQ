@@ -21,14 +21,26 @@
         </Grid>
 
         <TextBlock Text="Fade default" FontWeight="Bold"/>
-        <StackPanel Orientation="Horizontal" Margin="0,6,0,14">
-            <TextBlock Text="Fade-in (detik)" VerticalAlignment="Center"/>
-            <TextBox x:Name="FadeIn" Width="60" Margin="6,0,16,0"/>
-            <TextBlock Text="Fade-out (detik)" VerticalAlignment="Center"/>
-            <TextBox x:Name="FadeOut" Width="60" Margin="6,0,16,0"/>
-            <TextBlock Text="Kurva" VerticalAlignment="Center"/>
-            <ComboBox x:Name="Curve" Width="110" Margin="6,0,0,0"/>
-        </StackPanel>
+        <Grid Margin="0,6,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="90"/>
+                <ColumnDefinition/>
+                <ColumnDefinition Width="56"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+            </Grid.RowDefinitions>
+            <TextBlock Text="Fade-in" VerticalAlignment="Center"/>
+            <Slider x:Name="FadeIn" Grid.Column="1" Style="{StaticResource Ap.FadeSlider}" Width="Auto" Margin="0,4"/>
+            <TextBlock Grid.Column="2" Text="{Binding Value, ElementName=FadeIn, StringFormat={}{0:0.0} s}" TextAlignment="Right" VerticalAlignment="Center"/>
+            <TextBlock Grid.Row="1" Text="Fade-out" VerticalAlignment="Center"/>
+            <Slider x:Name="FadeOut" Grid.Row="1" Grid.Column="1" Style="{StaticResource Ap.FadeSlider}" Width="Auto" Margin="0,4"/>
+            <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Value, ElementName=FadeOut, StringFormat={}{0:0.0} s}" TextAlignment="Right" VerticalAlignment="Center"/>
+            <TextBlock Grid.Row="2" Text="Kurva" VerticalAlignment="Center"/>
+            <ComboBox x:Name="Curve" Grid.Row="2" Grid.Column="1" Width="160" HorizontalAlignment="Left" Margin="0,4"/>
+        </Grid>
 
         <TextBlock Text="Shortcut" FontWeight="Bold"/>
         <TextBlock Foreground="Gray" Margin="0,2,0,4" TextWrapping="Wrap"

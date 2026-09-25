@@ -146,6 +146,7 @@ public partial class MainWindow : Window
         if (text is null) return; // only modifiers held so far
         box.Text = text;
         box.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+        FocusMain(); // one key press = one assignment; the next key must not overwrite it
     }
 
     private void ReloadShortcuts()

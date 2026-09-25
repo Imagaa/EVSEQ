@@ -24,8 +24,8 @@ public partial class SettingsWindow : Window
         MonitorDevice.SelectedValue = vm.Project.MonitorDeviceId;
 
         var fade = vm.Project.DefaultFade;
-        FadeIn.Text = Seconds.Format(fade.FadeInMs);
-        FadeOut.Text = Seconds.Format(fade.FadeOutMs);
+        FadeIn.Value = fade.FadeInMs / 1000.0;
+        FadeOut.Value = fade.FadeOutMs / 1000.0;
         Curve.ItemsSource = Enum.GetValues<FadeCurve>();
         Curve.SelectedItem = fade.Curve;
 
@@ -37,11 +37,7 @@ public partial class SettingsWindow : Window
 
     private void Ok_Click(object sender, RoutedEventArgs e)
     {
-        if (!Seconds.TryParseMs(FadeIn.Text, out var fadeIn) || !Seconds.TryParseMs(FadeOut.Text, out var fadeOut))
-        {
-            MessageBox.Show(this, $"Durasi fade harus angka 0–{Seconds.Max} detik, mis. 0.4", "Settings", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
+        int fadeIn = (int)Math.Round(FadeIn.Value * 1000), fadeOut = (int)Math.Round(FadeOut.Value * 1000);
 
         var mainId = (string?)MainDevice.SelectedValue;
         var monitorId = (string?)MonitorDevice.SelectedValue;

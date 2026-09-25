@@ -3,6 +3,7 @@ using AudioPlayer.Core.Audio;
 using AudioPlayer.Core.Engine;
 using AudioPlayer.Core.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace AudioPlayer.App.ViewModels;
 
@@ -68,32 +69,54 @@ public sealed partial class TrackViewModel : ObservableObject
     public bool Loop { get => Track.Loop; set { Track.Loop = value; Changed(); } }
     public bool Overlay { get => Track.Overlay; set { Track.Overlay = value; Changed(); } }
 
-    // Fade override per track in seconds; empty = project default (shown as a grey hint).
-    // The typed text is not echoed back so "0." or "1," can be typed; invalid input throws for a red border.
-    public string FadeInText
+    // Fade per track, edited with sliders (seconds). Moving a slider creates an override;
+    // Reset goes back to the project default. The sliders always show the effective value.
+    public double FadeInSeconds
     {
-        get => Track.FadeInMs is { } ms ? Seconds.Format(ms) : "";
-        set { Track.FadeInMs = ParseFade(value); owner.Engine.Refresh(Track); owner.MarkDirty(); }
+        get => (Track.FadeInMs ?? owner.Project.DefaultFade.FadeInMs) / 1000.0;
+        set { Track.FadeInMs = (int)Math.Round(value * 1000); FadeChanged(); }
     }
 
-    public string FadeOutText
+    public double FadeOutSeconds
     {
-        get => Track.FadeOutMs is { } ms ? Seconds.Format(ms) : "";
-        set { Track.FadeOutMs = ParseFade(value); owner.Engine.Refresh(Track); owner.MarkDirty(); }
+        get => (Track.FadeOutMs ?? owner.Project.DefaultFade.FadeOutMs) / 1000.0;
+        set { Track.FadeOutMs = (int)Math.Round(value * 1000); FadeChanged(); }
     }
 
-    // Effective values the engine will use (override or project default)
-    public double FadeInSeconds => (Track.FadeInMs ?? owner.Project.DefaultFade.FadeInMs) / 1000.0;
-    public double FadeOutSeconds => (Track.FadeOutMs ?? owner.Project.DefaultFade.FadeOutMs) / 1000.0;
+    public bool FadeInIsDefault => Track.FadeInMs is null;
+    public bool FadeOutIsDefault => Track.FadeOutMs is null;
     public FadeCurve Curve => owner.Project.DefaultFade.Curve;
 
-    public string DefaultFadeIn => Seconds.Format(owner.Project.DefaultFade.FadeInMs);
-    public string DefaultFadeOut => Seconds.Format(owner.Project.DefaultFade.FadeOutMs);
-
-    public void DefaultsChanged()
+    [RelayCommand]
+    private void ResetFadeIn()
     {
-        OnPropertyChanged(nameof(DefaultFadeIn));
-        OnPropertyChanged(nameof(DefaultFadeOut));
+        Track.FadeInMs = null;
+        FadeChanged();
+    }
+
+    [RelayCommand]
+    private void ResetFadeOut()
+    {
+        Track.FadeOutMs = null;
+        FadeChanged();
+    }
+
+    /// <summary>The project default changed: tracks without an override follow it.</summary>
+    public void DefaultsChanged() => NotifyFades();
+
+    private void FadeChanged()
+    {
+        owner.Engine.Refresh(Track);
+        owner.MarkDirty();
+        NotifyFades();
+    }
+
+    private void NotifyFades()
+    {
+        OnPropertyChanged(nameof(FadeInSeconds));
+        OnPropertyChanged(nameof(FadeOutSeconds));
+        OnPropertyChanged(nameof(FadeInIsDefault));
+        OnPropertyChanged(nameof(FadeOutIsDefault));
     }
 
     /// <summary>Gesture that plays this track on Main ("" = none).</summary>
@@ -107,13 +130,6 @@ public sealed partial class TrackViewModel : ObservableObject
     {
         get => Track.ShortcutGlobal;
         set { Track.ShortcutGlobal = value; ShortcutChanged(); }
-    }
-
-    private static int? ParseFade(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return null;
-        if (Seconds.TryParseMs(text, out var ms)) return ms;
-        throw new ArgumentException($"Isi detik 0–{Seconds.Max}, mis. 0.5");
     }
 
     private void ShortcutChanged([CallerMemberName] string? name = null)
