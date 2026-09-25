@@ -13,6 +13,8 @@ Dua jalur output terpisah: **MAIN** untuk audiens dan **MONITOR** untuk operator
 
 *A native Windows multi-track audio player for live event operators, with separate Main (audience) and Monitor (cue) outputs.*
 
+![Tampilan utama EVSEQ saat operasi berjalan](docs/screenshots/main.png)
+
 ## Fitur
 
 - **Dua output** WASAPI di device berbeda (mis. sound system + headphone), bisa diganti saat live tanpa memutus output lain.
@@ -34,6 +36,103 @@ Installer belum ditandatangani secara digital, jadi Windows SmartScreen mungkin 
 
 Kebutuhan: Windows 10 atau 11, 64-bit.
 
+## Workflow
+
+### 1. Mulai: buat atau buka project
+
+![Welcome screen](docs/screenshots/welcome.png)
+
+Saat daftar track masih kosong, EVSEQ menampilkan welcome screen:
+
+- **＋ Tambah track** — pilih satu atau beberapa file audio.
+- **＋ Tambah folder** — semua audio di folder (termasuk subfolder) masuk berurutan sesuai nama file.
+- **Buka project** (`Ctrl+O`) atau klik salah satu **Project terakhir**.
+
+Project juga bisa dibuka langsung dari command line: `EVSEQ.exe "D:\Show\Wedding.approj"`.
+
+### 2. Atur output: MAIN untuk audiens, MONITOR untuk operator
+
+Di panel **Master** (kanan):
+
+- **Output MAIN** — device yang terhubung ke sound system.
+- **Output MONITOR** — headphone/speaker operator untuk cue.
+- Dua fader master untuk volume keseluruhan tiap jalur.
+
+Mengganti satu output tidak memutus output yang lain, jadi aman dilakukan saat live. Monitor sengaja **tidak pernah** berpindah otomatis ke device default, supaya preview tidak bocor ke audiens. Bila sebuah device dicabut saat berjalan, muncul banner merah dan catatan di panel **Aktivitas**.
+
+### 3. Siapkan setiap track
+
+Di **Track List**, setiap baris bisa diatur:
+
+| Kolom | Fungsi |
+|---|---|
+| **Cue / ▶ / ■** | Cue ke Monitor, Play/Pause ke Main, Stop Main |
+| **Loop** | Ulang terus (mis. musik latar sambutan) |
+| **Overlay** | Main di atas track lain tanpa menghentikannya (jingle, applause, SFX) |
+| **Fade in / Fade out** | Durasi fade per track (0–10 detik). Label abu-abu miring = memakai default dari Settings; **↺** kembali ke default |
+| **Shortcut** | Klik kotaknya lalu tekan tombol (mis. `F1`) untuk memutar track ini ke Main. Centang **G** agar tetap jalan walau jendela lain yang aktif |
+| **Volume** | Volume per track dalam dB |
+
+Klik kanan pada daftar untuk **Naik / Turun / Hapus dari list**.
+
+### 4. Cue di Monitor, tentukan start & end
+
+![Panel Cue dengan start/end point dan waveform](docs/screenshots/cue-panel.png)
+
+Panel **Cue / Preview** menampilkan track yang sedang di-cue (atau track yang dipilih di list):
+
+- **Waveform** di seek bar sudah dibentuk oleh kurva fade — yang terlihat adalah yang akan terdengar.
+- **Start / end point**: drag penanda putih di tepi rentang, atau posisikan playhead lalu klik **⇤ Set start** / **Set end ⇥**. **Reset** kembali ke seluruh file. Area di luar rentang diredupkan.
+- Bila end point diset, track otomatis fade-out tepat sampai senyap di end point.
+- Arahkan mouse ke seek bar untuk melihat waktu persis di posisi itu; klik atau drag untuk berpindah posisi.
+- **▶ Cue** (`F7`) mulai preview dari posisi kursor; **■** (`F8`) menghentikannya.
+
+### 5. Play ke Main
+
+![Panel Transport MAIN](docs/screenshots/main-panel.png)
+
+- Tekan **▶** di baris track (atau `Space` untuk track yang dipilih, atau shortcut track-nya). Track berjalan dengan fade-in; baris berubah hijau.
+- Memutar track biasa lain akan menggantikan track yang sedang main (fade-out dan fade-in bersamaan). Track **Overlay** main di atasnya.
+- Panel **Transport MAIN** menunjukkan judul, sisa waktu besar, dan seek bar. **▶/⏸** (`F5`) dan **■** (`F6`) mengendalikan track di Main.
+- Pause dan Stop selalu memakai fade-out, tanpa klik.
+- **PANIC** (`F12`, tombol merah di kanan atas) menghentikan Main dan Monitor seketika.
+
+### 6. Operasi tanpa mouse
+
+| Tombol | Aksi |
+|---|---|
+| `↑` / `↓` | Pilih track |
+| `Enter` | Cue track terpilih di Monitor |
+| `Space` | Play/Pause track terpilih di Main |
+| `S` | Stop track terpilih |
+| `L` | Loop on/off |
+| `F5` / `F6` | Play-Pause / Stop MAIN |
+| `F7` / `F8` | Play-Pause / Stop CUE |
+| `F12` | PANIC |
+| `Ctrl+Alt+1` … `9` | Putar track nomor 1–9 (global) |
+
+Semua shortcut bisa diubah di **Settings**, termasuk menjadikannya global.
+
+![Settings](docs/screenshots/settings.png)
+
+### 7. MIDI controller & StreamDeck
+
+![Panel MIDI](docs/screenshots/midi-panel.png)
+
+Di panel **MIDI** (tab di sebelah Aktivitas): pilih input controller, lalu klik **Learn** pada sebuah fungsi dan tekan tombol / geser fader di controller. Bisa di-assign: transport MAIN/CUE, PANIC, transport & volume track terpilih, navigasi list, fader master, dan play track 1–8.
+**StreamDeck**: gunakan aksi **Hotkey** bawaan StreamDeck yang mengirim shortcut global EVSEQ.
+
+### 8. Simpan & pengaman
+
+- `Ctrl+S` menyimpan project (file `.approj`); path audio disimpan relatif, jadi folder show bisa dipindah ke komputer lain.
+- Status bar menunjukkan **✓ Tersimpan** / **● Belum disimpan**, waktu **autosave** terakhir (tiap 60 detik), dan kondisi device MAIN/MONITOR.
+- Bila aplikasi tertutup tidak wajar, EVSEQ menawarkan pemulihan perubahan terakhir saat dibuka lagi.
+- Panel **Aktivitas** mencatat semua kejadian: simpan, autosave, device, error.
+
+### 9. Susun tampilan sesuai kebutuhan
+
+Setiap panel (Track List, Master, Transport MAIN, Cue / Preview, Aktivitas, MIDI) bisa di-drag lewat judulnya: dipindah ke sisi lain, ditumpuk menjadi tab, di-resize, atau dilepas ke jendela sendiri (misalnya di monitor kedua). Susunan diingat otomatis; **Reset layout** mengembalikan ke default.
+
 ## Build dari source
 
 Butuh [.NET SDK 10](https://dotnet.microsoft.com/download).
@@ -50,6 +149,7 @@ Struktur:
 - `src/AudioPlayer.App` — aplikasi WPF.
 - `tests/AudioPlayer.Core.Tests` — unit test.
 - `installer/` — skrip Inno Setup.
+- `assets/brand/` — logo dan ikon.
 
 ## Lisensi
 

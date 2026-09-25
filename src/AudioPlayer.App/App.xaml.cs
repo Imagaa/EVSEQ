@@ -17,6 +17,7 @@ public partial class App : Application
             return;
         }
         base.OnStartup(e);
-        new MainWindow().Show();
+        // EVSEQ.exe "show.approj" opens that project (used by file association / shortcuts).
+        new MainWindow(e.Args.FirstOrDefault(a => a.EndsWith(".approj", StringComparison.OrdinalIgnoreCase))).Show();
     }
 }

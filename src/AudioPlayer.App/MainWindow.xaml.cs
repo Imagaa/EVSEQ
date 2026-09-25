@@ -49,7 +49,7 @@ public partial class MainWindow : Window
     private Dictionary<string, (string Title, object Content)>? panels; // ContentId -> panel, reused across layout loads
     private string? defaultLayout;
 
-    public MainWindow()
+    public MainWindow(string? startupProject = null)
     {
         InitializeComponent();
         DataContext = vm;
@@ -72,6 +72,8 @@ public partial class MainWindow : Window
             shortcuts = new ShortcutDispatcher(this, vm);
             ReloadShortcuts();
             RefreshRecent();
+            // Only once everything above is in place; recovered unsaved work takes precedence.
+            if (startupProject is not null && !vm.IsDirty) OpenProject(Path.GetFullPath(startupProject));
             FocusMain();
         };
         Closing += (_, e) => { if (!ConfirmDiscard()) e.Cancel = true; };
@@ -190,7 +192,8 @@ public partial class MainWindow : Window
 
     private void ReloadShortcuts()
     {
-        var errors = shortcuts!.Reload();
+        if (shortcuts is null) return; // not wired yet; Loaded loads them once it is
+        var errors = shortcuts.Reload();
         if (errors.Count > 0) vm.Status = string.Join("  ", errors);
     }
 
