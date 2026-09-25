@@ -487,6 +487,8 @@ prd.md
 # Show/project files and their atomic-save temp files never belong in the source tree
 *.approj
 *.approj.tmp
-# Local editor / assistant folders
+# Local editor / assistant files (Claude Code plans, settings)
 .vscode/
 .claude/
+docs/superpowers/
+CLAUDE.md
