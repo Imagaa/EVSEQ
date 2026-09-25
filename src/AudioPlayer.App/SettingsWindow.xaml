@@ -21,9 +21,9 @@
 
         <TextBlock Text="Fade default" FontWeight="Bold"/>
         <StackPanel Orientation="Horizontal" Margin="0,6,0,14">
-            <TextBlock Text="Fade-in (ms)" VerticalAlignment="Center"/>
+            <TextBlock Text="Fade-in (detik)" VerticalAlignment="Center"/>
             <TextBox x:Name="FadeIn" Width="60" Margin="6,0,16,0"/>
-            <TextBlock Text="Fade-out (ms)" VerticalAlignment="Center"/>
+            <TextBlock Text="Fade-out (detik)" VerticalAlignment="Center"/>
             <TextBox x:Name="FadeOut" Width="60" Margin="6,0,16,0"/>
             <TextBlock Text="Kurva" VerticalAlignment="Center"/>
             <ComboBox x:Name="Curve" Width="110" Margin="6,0,0,0"/>

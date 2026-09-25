@@ -16,6 +16,12 @@ public sealed class Track
     /// <summary>Null means the project's DefaultFade applies.</summary>
     public int? FadeOutMs { get; set; }
 
+    /// <summary>Playback starts here (ms from the file start). Null = beginning of the file.</summary>
+    public int? StartMs { get; set; }
+
+    /// <summary>Playback ends here (ms from the file start). Null = end of the file.</summary>
+    public int? EndMs { get; set; }
+
     /// <summary>Gesture that plays this track on Main, e.g. "F1" or "Ctrl+Shift+J". Null = none.</summary>
     public string? Shortcut { get; set; }
 

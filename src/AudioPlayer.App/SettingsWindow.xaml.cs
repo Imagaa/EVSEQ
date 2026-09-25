@@ -24,8 +24,8 @@ public partial class SettingsWindow : Window
         MonitorDevice.SelectedValue = vm.Project.MonitorDeviceId;
 
         var fade = vm.Project.DefaultFade;
-        FadeIn.Text = fade.FadeInMs.ToString();
-        FadeOut.Text = fade.FadeOutMs.ToString();
+        FadeIn.Text = Seconds.Format(fade.FadeInMs);
+        FadeOut.Text = Seconds.Format(fade.FadeOutMs);
         Curve.ItemsSource = Enum.GetValues<FadeCurve>();
         Curve.SelectedItem = fade.Curve;
 
@@ -37,9 +37,9 @@ public partial class SettingsWindow : Window
 
     private void Ok_Click(object sender, RoutedEventArgs e)
     {
-        if (!TryMs(FadeIn.Text, out var fadeIn) || !TryMs(FadeOut.Text, out var fadeOut))
+        if (!Seconds.TryParseMs(FadeIn.Text, out var fadeIn) || !Seconds.TryParseMs(FadeOut.Text, out var fadeOut))
         {
-            MessageBox.Show(this, "Durasi fade harus angka 0–10000 ms.", "Settings", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(this, $"Durasi fade harus angka 0–{Seconds.Max} detik, mis. 0.4", "Settings", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -70,8 +70,6 @@ public partial class SettingsWindow : Window
             new FadeSettings { FadeInMs = fadeIn, FadeOutMs = fadeOut, Curve = (FadeCurve)Curve.SelectedItem });
         DialogResult = true;
     }
-
-    private static bool TryMs(string text, out int ms) => int.TryParse(text, out ms) && ms is >= 0 and <= 10000;
 }
 
 public sealed class ShortcutRow

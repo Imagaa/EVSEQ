@@ -51,6 +51,13 @@ public partial class MainWindow : Window
         };
     }
 
+    // While the thumb is dragged the bar stops following playback; the seek happens on release.
+    private void Seek_DragStarted(object sender, RoutedEventArgs e) =>
+        ((SeekBarViewModel)((FrameworkElement)sender).Tag).BeginDrag();
+
+    private void Seek_DragCompleted(object sender, RoutedEventArgs e) =>
+        ((SeekBarViewModel)((FrameworkElement)sender).Tag).EndDrag();
+
     /// <summary>Records the pressed key combination as the track's shortcut.</summary>
     private void ShortcutBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {

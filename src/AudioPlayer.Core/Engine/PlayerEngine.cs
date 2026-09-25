@@ -76,12 +76,15 @@ public sealed class PlayerEngine : IDisposable
         if (Find(t, bus) is { } v) StopVoice(v);
     }
 
+    public void Seek(Track t, BusKind bus, TimeSpan position) => Find(t, bus)?.Audio.Seek(position);
+
     public void Refresh(Track t)
     {
         foreach (var v in active.Where(v => v.Track == t))
         {
             v.Audio.Volume = Db.ToGain(t.VolumeDb);
             v.Audio.Loop = t.Loop;
+            v.Audio.SetRange(StartOf(t), EndOf(t));
         }
     }
 
@@ -124,6 +127,8 @@ public sealed class PlayerEngine : IDisposable
         if (v is null)
         {
             v = new Voice(t, bus, new TrackVoice(t.FilePath, OutputBus.Format, Db.ToGain(t.VolumeDb)));
+            v.Audio.SetRange(StartOf(t), EndOf(t));
+            v.Audio.Seek(StartOf(t));
             active.Add(v);
             BusOf(bus).Mixer.AddMixerInput(v.Audio);
         }
@@ -145,6 +150,8 @@ public sealed class PlayerEngine : IDisposable
     }
 
     private Voice? Find(Track t, BusKind bus) => active.Find(v => v.Track == t && v.Bus == bus);
+    private static TimeSpan StartOf(Track t) => TimeSpan.FromMilliseconds(t.StartMs ?? 0);
+    private static TimeSpan? EndOf(Track t) => t.EndMs is { } e ? TimeSpan.FromMilliseconds(e) : null;
     private OutputBus BusOf(BusKind bus) => bus == BusKind.Main ? Main : Monitor;
     private FadeSettings FadeOf(Track t) => new()
     {

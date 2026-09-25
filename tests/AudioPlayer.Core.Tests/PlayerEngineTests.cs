@@ -184,6 +184,42 @@ public class PlayerEngineTests : IDisposable
     }
 
     [Fact]
+    public void PlayStartsAtStartPointAndEndsAtEndPoint()
+    {
+        var t = NewTrack(2);
+        t.StartMs = 500;
+        t.EndMs = 700;
+        var ended = false;
+        engine.TrackEnded += (_, _) => ended = true;
+
+        engine.Play(t);
+        Assert.InRange(engine.GetPosition(t, BusKind.Main)!.Value.TotalMilliseconds, 499, 501);
+        Pull(main, 300); // 200 ms range is exhausted
+        Assert.True(ended);
+    }
+
+    [Fact]
+    public void SeekMovesRunningVoice()
+    {
+        var t = NewTrack(2);
+        engine.Preview(t);
+        engine.Seek(t, BusKind.Monitor, TimeSpan.FromMilliseconds(1500));
+        Assert.InRange(engine.GetRemaining(t, BusKind.Monitor)!.Value.TotalMilliseconds, 499, 501);
+    }
+
+    [Fact]
+    public void RefreshAppliesNewEndPointLive()
+    {
+        var t = NewTrack(2);
+        engine.Play(t);
+        Pull(main, 100);
+        t.EndMs = 200;
+        engine.Refresh(t);
+        Pull(main, 200);
+        Assert.Equal(PlayState.Stopped, engine.GetState(t, BusKind.Main));
+    }
+
+    [Fact]
     public void RefreshAppliesVolumeLive()
     {
         var t = NewTrack();

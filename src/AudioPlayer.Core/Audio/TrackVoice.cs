@@ -6,6 +6,7 @@ namespace AudioPlayer.Core.Audio;
 /// <summary>One playback instance of a file on one bus.</summary>
 public sealed class TrackVoice : ISampleProvider, IDisposable
 {
+    private readonly Lock gate = new(); // Read (audio thread) vs. Seek/SetRange (UI thread)
     private readonly AudioFileReader reader;
     private readonly LoopingReader looper;
     private readonly SmoothGainSampleProvider volume;
@@ -42,10 +43,30 @@ public sealed class TrackVoice : ISampleProvider, IDisposable
 
     public TimeSpan Duration => reader.TotalTime;
 
-    public TimeSpan Remaining => Duration - Position;
+    /// <summary>End point, or end of file when none is set.</summary>
+    public TimeSpan End => looper.End ?? reader.TotalTime;
+
+    public TimeSpan Remaining => End > Position ? End - Position : TimeSpan.Zero;
 
     /// <summary>Once set and the fade-out has finished, outputs silence without advancing the file.</summary>
     public volatile bool Paused;
+
+    public void SetRange(TimeSpan start, TimeSpan? end)
+    {
+        lock (gate)
+        {
+            looper.Start = start;
+            looper.End = end;
+        }
+    }
+
+    // ponytail: hard jump, may click when seeking audible audio; add a short dip-fade if operators seek live
+    public void Seek(TimeSpan position)
+    {
+        if (position < TimeSpan.Zero) position = TimeSpan.Zero;
+        if (position > reader.TotalTime) position = reader.TotalTime;
+        lock (gate) reader.CurrentTime = position;
+    }
 
     public int Read(Span<float> buffer)
     {
@@ -54,7 +75,7 @@ public sealed class TrackVoice : ISampleProvider, IDisposable
             buffer.Clear();
             return buffer.Length;
         }
-        return volume.Read(buffer);
+        lock (gate) return volume.Read(buffer);
     }
 
     public void Dispose() => reader.Dispose();

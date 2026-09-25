@@ -48,6 +48,47 @@ public class TrackVoiceTests
     }
 
     [Fact]
+    public void RangePlaysOnlyBetweenStartAndEnd()
+    {
+        using var v = Open(TestAudio.CreateWav(48000, 2, 0.2));
+        v.SetRange(TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100));
+        v.Seek(TimeSpan.FromMilliseconds(50));
+        Assert.Equal(4800, TestAudio.Read(v, 20000).Length); // 50 ms of stereo
+        Assert.InRange(v.Position.TotalMilliseconds, 99, 101);
+    }
+
+    [Fact]
+    public void LoopWrapsToStartPoint()
+    {
+        using var v = Open(TestAudio.CreateWav(48000, 2, 0.2));
+        v.SetRange(TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100));
+        v.Seek(TimeSpan.FromMilliseconds(50));
+        v.Loop = true;
+        Assert.Equal(96000, TestAudio.Read(v, 96000).Length);
+        Assert.InRange(v.Position.TotalMilliseconds, 50, 100);
+    }
+
+    [Fact]
+    public void LoopWithEmptyRangeDoesNotHang()
+    {
+        using var v = Open(TestAudio.CreateWav(48000, 2, 0.2));
+        v.SetRange(TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(100));
+        v.Seek(TimeSpan.FromMilliseconds(100));
+        v.Loop = true;
+        Assert.Empty(TestAudio.Read(v, 960));
+    }
+
+    [Fact]
+    public void SeekMovesPositionAndRemaining()
+    {
+        using var v = Open(TestAudio.CreateWav(48000, 2, 0.2));
+        v.Seek(TimeSpan.FromMilliseconds(150));
+        Assert.InRange(v.Remaining.TotalMilliseconds, 49, 51);
+        v.SetRange(TimeSpan.Zero, TimeSpan.FromMilliseconds(180));
+        Assert.InRange(v.Remaining.TotalMilliseconds, 29, 31); // remaining counts to the end point
+    }
+
+    [Fact]
     public void AudioInfoReadsDuration()
     {
         var d = AudioInfo.GetDuration(TestAudio.CreateWav(48000, 2, 0.25));

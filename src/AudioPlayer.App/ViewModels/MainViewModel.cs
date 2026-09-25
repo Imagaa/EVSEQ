@@ -18,6 +18,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public MainViewModel()
     {
         Engine = new PlayerEngine(new OutputBus(), new OutputBus());
+        MainBar = new SeekBarViewModel(Engine, BusKind.Main);
+        CueBar = new SeekBarViewModel(Engine, BusKind.Monitor);
         Devices.DeviceUnavailable += id =>
             Application.Current.Dispatcher.InvokeAsync(() => OnDeviceUnavailable(id));
         Engine.Main.PlaybackFailed += (_, ex) => BusFailed(BusKind.Main, ex.Message);
@@ -33,6 +35,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     public PlayerEngine Engine { get; }
+    public SeekBarViewModel MainBar { get; }
+    public SeekBarViewModel CueBar { get; }
     public AudioDevices Devices { get; } = new();
     public Project Project { get; private set; } = new();
     public string? ProjectPath { get; private set; }
@@ -44,7 +48,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] public partial TrackViewModel? Selected { get; set; }
     [ObservableProperty] public partial string Status { get; set; } = "";
     [ObservableProperty] public partial string TotalText { get; set; } = "00:00";
-    [ObservableProperty] public partial string NowPlayingText { get; set; } = "";
     [ObservableProperty] public partial bool IsDirty { get; set; }
     [ObservableProperty] public partial string? Alert { get; set; }
 
@@ -62,7 +65,41 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public static string Fmt(TimeSpan t) => t.TotalHours >= 1 ? t.ToString(@"h\:mm\:ss") : t.ToString(@"mm\:ss");
 
+    /// <summary>Tenths of a second, for start/end points.</summary>
+    public static string FmtPrecise(double seconds) => TimeSpan.FromSeconds(seconds).ToString(@"mm\:ss\.f");
+
     public void MarkDirty() => IsDirty = true;
+
+    public void RangesChanged() => Renumber();
+
+    // Start/end points are set on the cue bar's track at the cue bar's position.
+    [RelayCommand]
+    private void SetStart()
+    {
+        if (CueBar.Target is not { } t) return;
+        var ms = (int)Math.Round(CueBar.Position * 1000);
+        if (t.Track.EndMs is { } end && ms >= end)
+        {
+            Status = "Start point harus sebelum end point.";
+            return;
+        }
+        t.SetRange(ms == 0 ? null : ms, t.Track.EndMs);
+    }
+
+    [RelayCommand]
+    private void SetEnd()
+    {
+        if (CueBar.Target is not { } t) return;
+        var ms = (int)Math.Round(CueBar.Position * 1000);
+        if (ms <= (t.Track.StartMs ?? 0))
+        {
+            Status = "End point harus sesudah start point.";
+            return;
+        }
+        t.SetRange(t.Track.StartMs, ms >= (int)t.FileDuration.TotalMilliseconds ? null : ms);
+    }
+
+    [RelayCommand] private void ResetRange() => CueBar.Target?.SetRange(null, null);
 
     public string WindowTitle =>
         $"{(ProjectPath is null ? "Tanpa judul" : Path.GetFileNameWithoutExtension(ProjectPath))}{(IsDirty ? " *" : "")} — Audio Player";
@@ -276,15 +313,20 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void Tick()
     {
         Engine.Pump();
-        var now = "";
         foreach (var t in Tracks)
         {
             t.MainState = Engine.GetState(t.Track, BusKind.Main);
             t.MonitorState = Engine.GetState(t.Track, BusKind.Monitor);
             var rem = Engine.GetRemaining(t.Track, BusKind.Main) ?? Engine.GetRemaining(t.Track, BusKind.Monitor);
             t.RemainingText = rem is { } r ? "-" + Fmt(r) : "";
-            if (t.MainState == PlayState.Playing && !t.Overlay && rem is { } nr) now = $"▶ {t.Title}   -{Fmt(nr)}";
         }
-        NowPlayingText = now;
+
+        // Main bar: the playlist track (not an overlay jingle) first, else whatever is on Main.
+        MainBar.Update(
+            Tracks.FirstOrDefault(t => t.MainState == PlayState.Playing && !t.Overlay)
+            ?? Tracks.FirstOrDefault(t => t.MainState == PlayState.Paused && !t.Overlay)
+            ?? Tracks.FirstOrDefault(t => t.MainState != PlayState.Stopped));
+        // Cue bar: the track previewing on Monitor, else the selected track (free cursor for start/end).
+        CueBar.Update(Tracks.FirstOrDefault(t => t.MonitorState != PlayState.Stopped) ?? Selected);
     }
 }

@@ -16,17 +16,38 @@ public sealed partial class TrackViewModel : ObservableObject
         this.owner = owner;
         try
         {
-            Duration = track.IsMissing ? TimeSpan.Zero : AudioInfo.GetDuration(track.FilePath);
+            FileDuration = track.IsMissing ? TimeSpan.Zero : AudioInfo.GetDuration(track.FilePath);
         }
         catch (Exception)
         {
-            Duration = TimeSpan.Zero; // unreadable/unsupported file; Play will report the error
+            FileDuration = TimeSpan.Zero; // unreadable/unsupported file; Play will report the error
         }
     }
 
     public Track Track { get; }
-    public TimeSpan Duration { get; }
+
+    /// <summary>Length of the whole file.</summary>
+    public TimeSpan FileDuration { get; }
+
+    /// <summary>Length actually played: start point to end point.</summary>
+    public TimeSpan Duration => TimeSpan.FromSeconds(Math.Max(0, EndSeconds - StartSeconds));
+
     public string DurationText => MainViewModel.Fmt(Duration);
+    public double StartSeconds => (Track.StartMs ?? 0) / 1000.0;
+    public double EndSeconds => Track.EndMs is { } e ? e / 1000.0 : FileDuration.TotalSeconds;
+    public bool HasRange => Track.StartMs is not null || Track.EndMs is not null;
+
+    public void SetRange(int? startMs, int? endMs)
+    {
+        Track.StartMs = startMs;
+        Track.EndMs = endMs;
+        owner.Engine.Refresh(Track);
+        owner.MarkDirty();
+        OnPropertyChanged(nameof(Duration));
+        OnPropertyChanged(nameof(DurationText));
+        OnPropertyChanged(nameof(HasRange));
+        owner.RangesChanged();
+    }
     public string Title => Track.Title;
     public bool IsMissing => Track.IsMissing;
 
@@ -47,33 +68,22 @@ public sealed partial class TrackViewModel : ObservableObject
     public bool Loop { get => Track.Loop; set { Track.Loop = value; Changed(); } }
     public bool Overlay { get => Track.Overlay; set { Track.Overlay = value; Changed(); } }
 
-    // Fade override per track; empty text = use the project default (shown as a grey hint).
+    // Fade override per track in seconds; empty = project default (shown as a grey hint).
+    // The typed text is not echoed back so "0." or "1," can be typed; invalid input throws for a red border.
     public string FadeInText
     {
-        get => Track.FadeInMs?.ToString() ?? "";
-        set
-        {
-            if (TryFade(value, out var ms)) { Track.FadeInMs = ms; owner.MarkDirty(); }
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(UsesDefaultFadeIn));
-        }
+        get => Track.FadeInMs is { } ms ? Seconds.Format(ms) : "";
+        set { Track.FadeInMs = ParseFade(value); owner.MarkDirty(); }
     }
 
     public string FadeOutText
     {
-        get => Track.FadeOutMs?.ToString() ?? "";
-        set
-        {
-            if (TryFade(value, out var ms)) { Track.FadeOutMs = ms; owner.MarkDirty(); }
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(UsesDefaultFadeOut));
-        }
+        get => Track.FadeOutMs is { } ms ? Seconds.Format(ms) : "";
+        set { Track.FadeOutMs = ParseFade(value); owner.MarkDirty(); }
     }
 
-    public bool UsesDefaultFadeIn => Track.FadeInMs is null;
-    public bool UsesDefaultFadeOut => Track.FadeOutMs is null;
-    public int DefaultFadeIn => owner.Project.DefaultFade.FadeInMs;
-    public int DefaultFadeOut => owner.Project.DefaultFade.FadeOutMs;
+    public string DefaultFadeIn => Seconds.Format(owner.Project.DefaultFade.FadeInMs);
+    public string DefaultFadeOut => Seconds.Format(owner.Project.DefaultFade.FadeOutMs);
 
     public void DefaultsChanged()
     {
@@ -94,13 +104,11 @@ public sealed partial class TrackViewModel : ObservableObject
         set { Track.ShortcutGlobal = value; ShortcutChanged(); }
     }
 
-    private static bool TryFade(string text, out int? ms)
+    private static int? ParseFade(string text)
     {
-        ms = null;
-        if (string.IsNullOrWhiteSpace(text)) return true;
-        if (!int.TryParse(text, out var v) || v is < 0 or > 10000) return false;
-        ms = v;
-        return true;
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        if (Seconds.TryParseMs(text, out var ms)) return ms;
+        throw new ArgumentException($"Isi detik 0–{Seconds.Max}, mis. 0.5");
     }
 
     private void ShortcutChanged([CallerMemberName] string? name = null)
