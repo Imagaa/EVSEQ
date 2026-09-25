@@ -118,6 +118,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             devices = [];
         }
         string Name(string? id) => devices.FirstOrDefault(d => d.Id == id)?.Name ?? "?";
+        if (!devices.Select(d => d.Id).SequenceEqual(OutputDevices.Select(d => d.Id))) OutputDevices = devices;
+        OnPropertyChanged(nameof(MainOutputId));
+        OnPropertyChanged(nameof(MonitorOutputId));
 
         MainDeviceOk = Engine.Main.DeviceId is not null;
         MainDeviceText = MainDeviceOk ? Name(Engine.Main.DeviceId) : "tidak terhubung";
@@ -296,6 +299,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public void ApplyDevices()
     {
         var notes = new List<string>();
+        AttachMain(notes);
+        AttachMonitor(notes);
+        Status = string.Join("  ", notes);
+        UpdateDeviceInfo();
+    }
+
+    private void AttachMain(List<string> notes)
+    {
         try
         {
             var main = Devices.Find(Project.MainDeviceId);
@@ -306,6 +317,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             notes.Add($"Gagal membuka device Main: {ex.Message}");
         }
+    }
+
+    private void AttachMonitor(List<string> notes)
+    {
         try
         {
             Engine.Monitor.AttachDevice(Devices.Find(Project.MonitorDeviceId));
@@ -315,9 +330,50 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             notes.Add($"Gagal membuka device Monitor: {ex.Message}");
         }
         // Monitor never falls back to the default device: preview must not leak to the audience.
-        if (Engine.Monitor.DeviceId is null) notes.Add("Device Monitor belum dipilih — buka Settings.");
+        if (Engine.Monitor.DeviceId is null) notes.Add("Device Monitor belum dipilih — pilih di panel Master.");
+    }
+
+    // ---- Output selection from the Master panel (one bus at a time, the other keeps playing) ----
+
+    [ObservableProperty] public partial IReadOnlyList<AudioDevice> OutputDevices { get; set; } = [];
+
+    public string? MainOutputId
+    {
+        get => Engine.Main.DeviceId;
+        set
+        {
+            if (value is null || value == Engine.Main.DeviceId) return;
+            Project.MainDeviceId = value;
+            var notes = new List<string>();
+            AttachMain(notes);
+            AfterOutputChange(notes, "MAIN", Engine.Main.DeviceId);
+        }
+    }
+
+    public string? MonitorOutputId
+    {
+        get => Engine.Monitor.DeviceId;
+        set
+        {
+            if (value is null || value == Engine.Monitor.DeviceId) return;
+            Project.MonitorDeviceId = value;
+            var notes = new List<string>();
+            AttachMonitor(notes);
+            AfterOutputChange(notes, "MONITOR", Engine.Monitor.DeviceId);
+        }
+    }
+
+    /// <summary>Re-reads the device list, e.g. when a dropdown opens after plugging a USB interface.</summary>
+    public void RefreshOutputDevices() => UpdateDeviceInfo();
+
+    private void AfterOutputChange(List<string> notes, string bus, string? id)
+    {
+        if (Engine.Main.DeviceId is not null && Engine.Main.DeviceId == Engine.Monitor.DeviceId)
+            notes.Add("Main dan Monitor memakai device yang sama — preview akan terdengar oleh audiens.");
         Status = string.Join("  ", notes);
+        MarkDirty();
         UpdateDeviceInfo();
+        if (id is not null) Log($"Output {bus}: {OutputDevices.FirstOrDefault(d => d.Id == id)?.Name ?? id}", ActivityKind.Success);
     }
 
     /// <summary>Raised when any shortcut source changes (track shortcut edited, tracks added/removed).</summary>

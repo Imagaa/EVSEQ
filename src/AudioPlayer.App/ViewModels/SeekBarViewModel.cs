@@ -13,7 +13,27 @@ public sealed partial class SeekBarViewModel(PlayerEngine engine, BusKind bus) :
 
     public TrackViewModel? Target { get; private set; }
 
-    public bool IsDragging { get; private set; }
+    /// <summary>
+    /// Bound to the seek bar's IsScrubbing: while true the bar stops following playback;
+    /// turning false performs the seek to where the user let go.
+    /// </summary>
+    public bool IsDragging
+    {
+        get;
+        set
+        {
+            if (field == value) return;
+            field = value;
+            OnPropertyChanged();
+            if (!value) Seek();
+        }
+    }
+
+    // Envelope drawn on the seek bar (seconds)
+    [ObservableProperty] public partial double FadeIn { get; set; }
+    [ObservableProperty] public partial double FadeOut { get; set; }
+    [ObservableProperty] public partial bool ShowFadeOut { get; set; }
+    [ObservableProperty] public partial AudioPlayer.Core.Audio.FadeCurve Curve { get; set; }
 
     [ObservableProperty] public partial bool HasTrack { get; set; }
     [ObservableProperty] public partial string Title { get; set; } = "—";
@@ -44,21 +64,17 @@ public sealed partial class SeekBarViewModel(PlayerEngine engine, BusKind bus) :
         }
     }
 
-    public void BeginDrag() => IsDragging = true;
-
-    public void EndDrag()
-    {
-        IsDragging = false;
-        Seek();
-    }
-
     /// <summary>Called by the UI timer.</summary>
     public void Update(TrackViewModel? t)
     {
         if (t != Target)
         {
+            if (IsDragging)
+            {
+                Target = null; // switching tracks mid-drag: end the drag without seeking anything
+                IsDragging = false;
+            }
             Target = t;
-            IsDragging = false;
             position = t?.StartSeconds ?? 0;
         }
         HasTrack = t is not null;
@@ -78,6 +94,10 @@ public sealed partial class SeekBarViewModel(PlayerEngine engine, BusKind bus) :
         RangeStart = t.StartSeconds;
         RangeEnd = t.EndSeconds;
         RangeText = $"{MainViewModel.FmtPrecise(RangeStart)} – {MainViewModel.FmtPrecise(RangeEnd)}";
+        FadeIn = t.FadeInSeconds;
+        FadeOut = t.FadeOutSeconds;
+        ShowFadeOut = t.Track.EndMs is not null; // the engine only auto-fades before an end point
+        Curve = t.Curve;
         if (!IsDragging && engine.GetPosition(t.Track, bus) is { } p) position = p.TotalSeconds;
         OnPropertyChanged(nameof(Position));
         ShowTexts();

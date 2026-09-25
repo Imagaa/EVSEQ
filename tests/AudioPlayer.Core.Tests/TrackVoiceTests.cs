@@ -88,6 +88,49 @@ public class TrackVoiceTests
         Assert.InRange(v.Remaining.TotalMilliseconds, 29, 31); // remaining counts to the end point
     }
 
+    private static float Rms(float[] b) => MathF.Sqrt(b.Select(x => x * x).Average());
+
+    [Fact]
+    public void AutoFadeOutReachesSilenceAtEndPoint()
+    {
+        using var v = Open(TestAudio.CreateWav(48000, 2, 1));
+        v.SetRange(TimeSpan.Zero, TimeSpan.FromMilliseconds(500));
+        v.AutoFadeCurve = FadeCurve.Linear;
+        v.AutoFadeOutMs = 200;
+
+        TestAudio.Read(v, 28800);                  // 0–300 ms: before the fade zone
+        var tail = TestAudio.Read(v, 19200);       // 300–500 ms: the fade
+        var start = Rms(tail[..960]);
+        var end = Rms(tail[^960..]);
+        Assert.True(start > 0.3f, $"fade should start near full level, was {start}");
+        Assert.True(end < 0.05f * start, $"fade should end near silence, was {end}");
+    }
+
+    [Fact]
+    public void AutoFadeOutIsSkippedWhileLooping()
+    {
+        using var v = Open(TestAudio.CreateWav(48000, 2, 1));
+        v.SetRange(TimeSpan.Zero, TimeSpan.FromMilliseconds(500));
+        v.AutoFadeOutMs = 200;
+        v.Loop = true;
+        TestAudio.Read(v, 28800);
+        Assert.True(Rms(TestAudio.Read(v, 19200)[^960..]) > 0.3f);
+    }
+
+    [Fact]
+    public void SeekingBackOutOfFadeZoneRestoresLevel()
+    {
+        using var v = Open(TestAudio.CreateWav(48000, 2, 1));
+        v.SetRange(TimeSpan.Zero, TimeSpan.FromMilliseconds(500));
+        v.AutoFadeCurve = FadeCurve.Linear;
+        v.AutoFadeOutMs = 200;
+        v.Seek(TimeSpan.FromMilliseconds(450));
+        TestAudio.Read(v, 960);                    // inside the fade zone: fade starts
+        v.Seek(TimeSpan.FromMilliseconds(100));
+        TestAudio.Read(v, 9600);                   // restore ramp
+        Assert.True(Rms(TestAudio.Read(v, 960)) > 0.3f);
+    }
+
     [Fact]
     public void AudioInfoReadsDuration()
     {

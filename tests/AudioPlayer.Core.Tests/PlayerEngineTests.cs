@@ -199,6 +199,19 @@ public class PlayerEngineTests : IDisposable
     }
 
     [Fact]
+    public void StopDuringAutoFadeStillReleasesVoice()
+    {
+        var t = NewTrack(2);
+        t.EndMs = 300;
+        engine.DefaultFade.FadeOutMs = 200;
+        engine.Play(t);
+        Pull(main, 150);           // inside the 200 ms auto fade zone
+        engine.Stop(t, BusKind.Main);
+        Pull(main, 400);
+        Assert.Empty(main.Mixer.MixerInputs);
+    }
+
+    [Fact]
     public void SeekMovesRunningVoice()
     {
         var t = NewTrack(2);

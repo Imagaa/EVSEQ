@@ -46,6 +46,140 @@
                 <Setter Property="Margin" Value="0,0,6,0"/>
                 <Setter Property="Padding" Value="12,5"/>
             </Style>
+            <!-- ===== Console-style faders. Foreground = fill color (MAIN red, MONITOR blue) ===== -->
+            <Style x:Key="Ap.FaderFill" TargetType="RepeatButton">
+                <Setter Property="Focusable" Value="False"/>
+                <Setter Property="IsTabStop" Value="False"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="RepeatButton">
+                            <Border Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Slider}}" CornerRadius="3"/>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style x:Key="Ap.FaderEmpty" TargetType="RepeatButton">
+                <Setter Property="Focusable" Value="False"/>
+                <Setter Property="IsTabStop" Value="False"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="RepeatButton">
+                            <Border Background="Transparent"/>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <!-- Fader cap: brushed-metal look with a center line, like a mixing desk -->
+            <Style x:Key="Ap.FaderCapV" TargetType="Thumb">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Thumb">
+                            <Border Width="38" Height="20" CornerRadius="3" BorderBrush="#111" BorderThickness="1">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                        <GradientStop Color="#E4E4E9" Offset="0"/>
+                                        <GradientStop Color="#B9B9C1" Offset="0.45"/>
+                                        <GradientStop Color="#8E8E97" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <Rectangle Height="2" Fill="#202024" Margin="4,0"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style x:Key="Ap.FaderCapH" TargetType="Thumb">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Thumb">
+                            <Border Width="12" Height="20" CornerRadius="2" BorderBrush="#111" BorderThickness="1">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                        <GradientStop Color="#E4E4E9" Offset="0"/>
+                                        <GradientStop Color="#9A9AA3" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <Rectangle Width="2" Fill="#202024" Margin="0,3"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Vertical master fader with dB tick marks on both sides -->
+            <Style x:Key="Ap.FaderV" TargetType="Slider">
+                <Setter Property="Orientation" Value="Vertical"/>
+                <Setter Property="Focusable" Value="False"/>
+                <Setter Property="Minimum" Value="-60"/>
+                <Setter Property="Maximum" Value="0"/>
+                <Setter Property="SmallChange" Value="0.5"/>
+                <Setter Property="LargeChange" Value="3"/>
+                <Setter Property="Ticks" Value="0,-6,-12,-18,-24,-36,-48,-60"/>
+                <Setter Property="Foreground" Value="{StaticResource Ap.Main}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Slider">
+                            <Grid Background="Transparent">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="42"/>
+                                    <ColumnDefinition Width="10"/>
+                                </Grid.ColumnDefinitions>
+                                <TickBar Placement="Left" Fill="{StaticResource Ap.SubText}" Margin="0,0,2,0"
+                                         Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Ticks="{TemplateBinding Ticks}"
+                                         IsDirectionReversed="{TemplateBinding IsDirectionReversed}" ReservedSpace="20"/>
+                                <Border Grid.Column="1" Width="8" CornerRadius="4" Background="#121216" BorderBrush="{StaticResource Ap.Line}" BorderThickness="1"
+                                        HorizontalAlignment="Center" Margin="0,10"/>
+                                <Track x:Name="PART_Track" Grid.Column="1" Orientation="Vertical" IsDirectionReversed="{TemplateBinding IsDirectionReversed}">
+                                    <Track.DecreaseRepeatButton>
+                                        <RepeatButton Command="Slider.DecreaseLarge" Style="{StaticResource Ap.FaderFill}" Width="8" Margin="0,0,0,-10"/>
+                                    </Track.DecreaseRepeatButton>
+                                    <Track.IncreaseRepeatButton>
+                                        <RepeatButton Command="Slider.IncreaseLarge" Style="{StaticResource Ap.FaderEmpty}"/>
+                                    </Track.IncreaseRepeatButton>
+                                    <Track.Thumb>
+                                        <Thumb Style="{StaticResource Ap.FaderCapV}"/>
+                                    </Track.Thumb>
+                                </Track>
+                                <TickBar Grid.Column="2" Placement="Right" Fill="{StaticResource Ap.SubText}" Margin="2,0,0,0"
+                                         Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Ticks="{TemplateBinding Ticks}"
+                                         IsDirectionReversed="{TemplateBinding IsDirectionReversed}" ReservedSpace="20"/>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Slim horizontal fader for per-track volume -->
+            <Style x:Key="Ap.FaderH" TargetType="Slider">
+                <Setter Property="Focusable" Value="False"/>
+                <Setter Property="Minimum" Value="-60"/>
+                <Setter Property="Maximum" Value="0"/>
+                <Setter Property="SmallChange" Value="0.5"/>
+                <Setter Property="Height" Value="22"/>
+                <Setter Property="Foreground" Value="#8A8A96"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Slider">
+                            <Grid Background="Transparent">
+                                <Border Height="4" CornerRadius="2" Background="#121216" Margin="6,0"/>
+                                <Track x:Name="PART_Track" Orientation="Horizontal" IsDirectionReversed="{TemplateBinding IsDirectionReversed}">
+                                    <Track.DecreaseRepeatButton>
+                                        <RepeatButton Command="Slider.DecreaseLarge" Style="{StaticResource Ap.FaderFill}" Height="4" Margin="0,0,-6,0"/>
+                                    </Track.DecreaseRepeatButton>
+                                    <Track.IncreaseRepeatButton>
+                                        <RepeatButton Command="Slider.IncreaseLarge" Style="{StaticResource Ap.FaderEmpty}"/>
+                                    </Track.IncreaseRepeatButton>
+                                    <Track.Thumb>
+                                        <Thumb Style="{StaticResource Ap.FaderCapH}"/>
+                                    </Track.Thumb>
+                                </Track>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
             <Style x:Key="Ap.Danger" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                 <Setter Property="Focusable" Value="False"/>
                 <Setter Property="Background" Value="#C62828"/>

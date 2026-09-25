@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ad="https://github.com/Dirkster99/AvalonDock"
         xmlns:adt="clr-namespace:AvalonDock.Themes;assembly=AvalonDock.Themes.VS2013"
+        xmlns:c="clr-namespace:AudioPlayer.App.Controls"
         Title="{Binding WindowTitle}" Height="720" Width="1280" MinWidth="900" MinHeight="560"
         WindowState="Maximized" Background="{StaticResource Ap.Bg}" Foreground="{StaticResource Ap.Text}">
     <Window.CommandBindings>
@@ -47,17 +48,6 @@
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
-        <!-- Seek slider: click-to-position, start/end range highlighted -->
-        <Style x:Key="SeekSlider" TargetType="Slider" BasedOn="{StaticResource {x:Type Slider}}">
-            <Setter Property="IsMoveToPointEnabled" Value="True"/>
-            <Setter Property="IsSelectionRangeEnabled" Value="True"/>
-            <Setter Property="Focusable" Value="False"/>
-            <Setter Property="MinWidth" Value="120"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Minimum" Value="0"/>
-            <EventSetter Event="Thumb.DragStarted" Handler="Seek_DragStarted"/>
-            <EventSetter Event="Thumb.DragCompleted" Handler="Seek_DragCompleted"/>
         </Style>
     </Window.Resources>
 
@@ -179,7 +169,8 @@
                                     <ListView x:Name="TrackList" ItemsSource="{Binding Tracks}" SelectedItem="{Binding Selected}"
                                               Background="Transparent" BorderThickness="0">
                                         <ListView.ItemContainerStyle>
-                                            <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
+                                            <!-- Must derive from the GridView row style, or rows render as plain text instead of columns -->
+                                            <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Static GridView.GridViewItemContainerStyleKey}}">
                                                 <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding MainState}" Value="Playing">
@@ -271,7 +262,7 @@
                                                     <GridViewColumn.CellTemplate>
                                                         <DataTemplate>
                                                             <StackPanel Orientation="Horizontal">
-                                                                <Slider Width="130" Minimum="-60" Maximum="0" SmallChange="0.5" Value="{Binding VolumeDb}" Focusable="False" VerticalAlignment="Center"/>
+                                                                <Slider Style="{StaticResource Ap.FaderH}" Width="130" Value="{Binding VolumeDb}" VerticalAlignment="Center"/>
                                                                 <TextBlock Text="{Binding VolumeDb, StringFormat={}{0:0.0} dB}" Margin="8,0,0,0" VerticalAlignment="Center"/>
                                                             </StackPanel>
                                                         </DataTemplate>
@@ -333,28 +324,48 @@
                         <ad:LayoutAnchorablePane DockWidth="1*" DockMinWidth="170">
                             <ad:LayoutAnchorable Title="Master" ContentId="master" CanClose="False" CanHide="False">
                                 <!-- ===== Master faders ===== -->
-                                <ScrollViewer x:Name="MasterPanel" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Background="{StaticResource Ap.Bg}">
-                                    <Grid Margin="10" MinHeight="220" MinWidth="150">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition/>
-                                            <ColumnDefinition/>
-                                        </Grid.ColumnDefinitions>
-                                        <DockPanel Margin="4,0">
-                                            <Border DockPanel.Dock="Top" Style="{StaticResource Ap.Chip}" Background="{StaticResource Ap.Main}" HorizontalAlignment="Center">
-                                                <TextBlock Text="MAIN" Style="{StaticResource Ap.ChipText}"/>
-                                            </Border>
-                                            <TextBlock DockPanel.Dock="Bottom" Text="{Binding MainVolumeDb, StringFormat={}{0:0.0} dB}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
-                                            <Slider Orientation="Vertical" Minimum="-60" Maximum="0" SmallChange="0.5" LargeChange="3" Value="{Binding MainVolumeDb}"
-                                                    HorizontalAlignment="Center" Margin="0,8" Focusable="False" MinHeight="120" ToolTip="Master volume MAIN"/>
-                                        </DockPanel>
-                                        <DockPanel Grid.Column="1" Margin="4,0">
-                                            <Border DockPanel.Dock="Top" Style="{StaticResource Ap.Chip}" Background="{StaticResource Ap.Cue}" HorizontalAlignment="Center">
-                                                <TextBlock Text="MONITOR" Style="{StaticResource Ap.ChipText}"/>
-                                            </Border>
-                                            <TextBlock DockPanel.Dock="Bottom" Text="{Binding MonitorVolumeDb, StringFormat={}{0:0.0} dB}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
-                                            <Slider Orientation="Vertical" Minimum="-60" Maximum="0" SmallChange="0.5" LargeChange="3" Value="{Binding MonitorVolumeDb}"
-                                                    HorizontalAlignment="Center" Margin="0,8" Focusable="False" MinHeight="120" ToolTip="Master volume MONITOR"/>
-                                        </DockPanel>
+                                <!-- No horizontal scrolling: long device names are trimmed instead of pushing a fader out of view -->
+                                <ScrollViewer x:Name="MasterPanel" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Background="{StaticResource Ap.Bg}">
+                                    <Grid Margin="10" MinHeight="320">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition/>
+                                        </Grid.RowDefinitions>
+                                        <!-- Output routing, switchable live: changing one bus never interrupts the other -->
+                                        <StackPanel Margin="0,0,0,12">
+                                            <TextBlock Text="Output MAIN" Foreground="{StaticResource Ap.Main}" FontWeight="SemiBold" Margin="0,0,0,3"/>
+                                            <ComboBox ItemsSource="{Binding OutputDevices}" DisplayMemberPath="Name" SelectedValuePath="Id"
+                                                      SelectedValue="{Binding MainOutputId}" DropDownOpened="Outputs_DropDownOpened"
+                                                      HorizontalAlignment="Stretch" Focusable="False" ToolTip="Device yang didengar audiens"/>
+                                            <TextBlock Text="Output MONITOR" Foreground="{StaticResource Ap.Cue}" FontWeight="SemiBold" Margin="0,10,0,3"/>
+                                            <ComboBox ItemsSource="{Binding OutputDevices}" DisplayMemberPath="Name" SelectedValuePath="Id"
+                                                      SelectedValue="{Binding MonitorOutputId}" DropDownOpened="Outputs_DropDownOpened"
+                                                      HorizontalAlignment="Stretch" Focusable="False" ToolTip="Device preview/cue untuk operator (headphone)"/>
+                                        </StackPanel>
+                                        <Grid Grid.Row="1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition/>
+                                                <ColumnDefinition/>
+                                            </Grid.ColumnDefinitions>
+                                            <DockPanel>
+                                                <Border DockPanel.Dock="Top" Style="{StaticResource Ap.Chip}" Background="{StaticResource Ap.Main}" HorizontalAlignment="Center">
+                                                    <TextBlock Text="MAIN" Style="{StaticResource Ap.ChipText}"/>
+                                                </Border>
+                                                <TextBlock DockPanel.Dock="Bottom" Text="{Binding MainVolumeDb, StringFormat={}{0:0.0} dB}" HorizontalAlignment="Center"
+                                                           FontWeight="SemiBold" Margin="0,6,0,0"/>
+                                                <Slider Style="{StaticResource Ap.FaderV}" Value="{Binding MainVolumeDb}" Foreground="{StaticResource Ap.Main}"
+                                                        HorizontalAlignment="Center" Margin="0,8" MinHeight="140" ToolTip="Master volume MAIN"/>
+                                            </DockPanel>
+                                            <DockPanel Grid.Column="1">
+                                                <Border DockPanel.Dock="Top" Style="{StaticResource Ap.Chip}" Background="{StaticResource Ap.Cue}" HorizontalAlignment="Center">
+                                                    <TextBlock Text="MONITOR" Style="{StaticResource Ap.ChipText}"/>
+                                                </Border>
+                                                <TextBlock DockPanel.Dock="Bottom" Text="{Binding MonitorVolumeDb, StringFormat={}{0:0.0} dB}" HorizontalAlignment="Center"
+                                                           FontWeight="SemiBold" Margin="0,6,0,0"/>
+                                                <Slider Style="{StaticResource Ap.FaderV}" Value="{Binding MonitorVolumeDb}" Foreground="{StaticResource Ap.Cue}"
+                                                        HorizontalAlignment="Center" Margin="0,8" MinHeight="140" ToolTip="Master volume MONITOR"/>
+                                            </DockPanel>
+                                        </Grid>
                                     </Grid>
                                 </ScrollViewer>
                             </ad:LayoutAnchorable>
@@ -375,12 +386,13 @@
                                                        Foreground="{StaticResource Ap.Main}" Margin="10,0,0,0" VerticalAlignment="Center"/>
                                             <TextBlock Text="{Binding MainBar.Title}" Style="{StaticResource PanelTitle}" FontSize="20"/>
                                         </DockPanel>
-                                        <DockPanel Margin="0,8,0,4">
-                                            <TextBlock DockPanel.Dock="Left" Text="{Binding MainBar.ElapsedText}" Style="{StaticResource Ap.Caption}" Width="52"/>
-                                            <Slider Style="{StaticResource SeekSlider}" Tag="{Binding MainBar}"
-                                                    Maximum="{Binding MainBar.Duration}" Value="{Binding MainBar.Position}" IsEnabled="{Binding MainBar.HasTrack}"
-                                                    SelectionStart="{Binding MainBar.RangeStart}" SelectionEnd="{Binding MainBar.RangeEnd}"
-                                                    ToolTip="Klik/geser untuk pindah posisi di Main"/>
+                                        <DockPanel Margin="0,6,0,4">
+                                            <TextBlock DockPanel.Dock="Left" Text="{Binding MainBar.ElapsedText}" Style="{StaticResource Ap.Caption}" Width="48" Margin="0,12,0,0"/>
+                                            <c:SeekBarView Accent="{StaticResource Ap.Main}" Height="52"
+                                                           Duration="{Binding MainBar.Duration}" Position="{Binding MainBar.Position}" IsScrubbing="{Binding MainBar.IsDragging}"
+                                                           IsEnabled="{Binding MainBar.HasTrack}" RangeStart="{Binding MainBar.RangeStart}" RangeEnd="{Binding MainBar.RangeEnd}"
+                                                           FadeIn="{Binding MainBar.FadeIn}" FadeOut="{Binding MainBar.FadeOut}" ShowFadeOut="{Binding MainBar.ShowFadeOut}"
+                                                           Curve="{Binding MainBar.Curve}" ToolTip="Klik/geser untuk pindah posisi di Main"/>
                                         </DockPanel>
                                         <WrapPanel>
                                             <StackPanel Orientation="Horizontal" Margin="0,4,18,0">
@@ -410,12 +422,13 @@
                                                        Foreground="{StaticResource Ap.Cue}" Margin="10,0,0,0" VerticalAlignment="Center"/>
                                             <TextBlock Text="{Binding CueBar.Title}" Style="{StaticResource PanelTitle}"/>
                                         </DockPanel>
-                                        <DockPanel Margin="0,8,0,4">
-                                            <TextBlock DockPanel.Dock="Left" Text="{Binding CueBar.ElapsedText}" Style="{StaticResource Ap.Caption}" Width="52"/>
-                                            <Slider Style="{StaticResource SeekSlider}" Tag="{Binding CueBar}"
-                                                    Maximum="{Binding CueBar.Duration}" Value="{Binding CueBar.Position}" IsEnabled="{Binding CueBar.HasTrack}"
-                                                    SelectionStart="{Binding CueBar.RangeStart}" SelectionEnd="{Binding CueBar.RangeEnd}"
-                                                    ToolTip="Klik/geser untuk pindah posisi preview atau memilih titik start/end"/>
+                                        <DockPanel Margin="0,6,0,4">
+                                            <TextBlock DockPanel.Dock="Left" Text="{Binding CueBar.ElapsedText}" Style="{StaticResource Ap.Caption}" Width="48" Margin="0,12,0,0"/>
+                                            <c:SeekBarView Accent="{StaticResource Ap.Cue}" Height="52"
+                                                           Duration="{Binding CueBar.Duration}" Position="{Binding CueBar.Position}" IsScrubbing="{Binding CueBar.IsDragging}"
+                                                           IsEnabled="{Binding CueBar.HasTrack}" RangeStart="{Binding CueBar.RangeStart}" RangeEnd="{Binding CueBar.RangeEnd}"
+                                                           FadeIn="{Binding CueBar.FadeIn}" FadeOut="{Binding CueBar.FadeOut}" ShowFadeOut="{Binding CueBar.ShowFadeOut}"
+                                                           Curve="{Binding CueBar.Curve}" ToolTip="Klik/geser untuk pindah posisi preview atau memilih titik start/end"/>
                                         </DockPanel>
                                         <WrapPanel>
                                             <StackPanel Orientation="Horizontal" Margin="0,4,18,0">

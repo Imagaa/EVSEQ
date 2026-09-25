@@ -51,6 +51,20 @@ public sealed class TrackVoice : ISampleProvider, IDisposable
     /// <summary>Once set and the fade-out has finished, outputs silence without advancing the file.</summary>
     public volatile bool Paused;
 
+    private bool autoFading;
+
+    /// <summary>
+    /// Fade-out applied automatically so playback reaches silence exactly at the end point (0 = off).
+    /// Setting it re-arms the fade. Ignored while looping.
+    /// </summary>
+    public int AutoFadeOutMs
+    {
+        get;
+        set { lock (gate) { field = value; autoFading = false; } }
+    }
+
+    public FadeCurve AutoFadeCurve { get; set; } = FadeCurve.EqualPower;
+
     public void SetRange(TimeSpan start, TimeSpan? end)
     {
         lock (gate)
@@ -65,7 +79,15 @@ public sealed class TrackVoice : ISampleProvider, IDisposable
     {
         if (position < TimeSpan.Zero) position = TimeSpan.Zero;
         if (position > reader.TotalTime) position = reader.TotalTime;
-        lock (gate) reader.CurrentTime = position;
+        lock (gate)
+        {
+            reader.CurrentTime = position;
+            if (autoFading && Remaining.TotalMilliseconds > AutoFadeOutMs)
+            {
+                autoFading = false; // moved back out of the fade zone: bring the level back
+                Fader.FadeTo(1f, 30, FadeCurve.Linear);
+            }
+        }
     }
 
     public int Read(Span<float> buffer)
@@ -75,7 +97,19 @@ public sealed class TrackVoice : ISampleProvider, IDisposable
             buffer.Clear();
             return buffer.Length;
         }
-        lock (gate) return volume.Read(buffer);
+        lock (gate)
+        {
+            if (AutoFadeOutMs > 0 && !autoFading && !Loop && !Paused)
+            {
+                var left = Remaining.TotalMilliseconds;
+                if (left <= AutoFadeOutMs)
+                {
+                    Fader.FadeTo(0f, (int)left, AutoFadeCurve);
+                    autoFading = true;
+                }
+            }
+            return volume.Read(buffer);
+        }
     }
 
     public void Dispose() => reader.Dispose();

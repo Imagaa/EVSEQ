@@ -85,6 +85,7 @@ public sealed class PlayerEngine : IDisposable
             v.Audio.Volume = Db.ToGain(t.VolumeDb);
             v.Audio.Loop = t.Loop;
             v.Audio.SetRange(StartOf(t), EndOf(t));
+            ArmAutoFade(v);
         }
     }
 
@@ -136,8 +137,17 @@ public sealed class PlayerEngine : IDisposable
         v.Audio.Loop = t.Loop;
         v.Audio.Paused = false;
         v.Audio.Fader.FadeTo(1f, f.FadeInMs, f.Curve);
+        ArmAutoFade(v);
         v.State = PlayState.Playing;
         return v;
+    }
+
+    /// <summary>With an end point set, fade out so the track reaches silence exactly there.</summary>
+    private void ArmAutoFade(Voice v)
+    {
+        var f = FadeOf(v.Track);
+        v.Audio.AutoFadeCurve = f.Curve;
+        v.Audio.AutoFadeOutMs = v.Track.EndMs is null ? 0 : f.FadeOutMs;
     }
 
     private void StopVoice(Voice v)
@@ -145,6 +155,7 @@ public sealed class PlayerEngine : IDisposable
         var f = FadeOf(v.Track);
         active.Remove(v);
         draining.Add(v);
+        v.Audio.AutoFadeOutMs = 0; // must not retarget the stop fade, or the voice would never end
         v.Audio.Paused = false;
         v.Audio.Fader.FadeTo(0f, f.FadeOutMs, f.Curve, endWhenDone: true);
     }

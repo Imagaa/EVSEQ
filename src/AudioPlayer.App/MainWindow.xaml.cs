@@ -123,12 +123,8 @@ public partial class MainWindow : Window
         vm.Log("Layout panel dikembalikan ke default");
     }
 
-    // While the thumb is dragged the bar stops following playback; the seek happens on release.
-    private void Seek_DragStarted(object sender, RoutedEventArgs e) =>
-        ((SeekBarViewModel)((FrameworkElement)sender).Tag).BeginDrag();
-
-    private void Seek_DragCompleted(object sender, RoutedEventArgs e) =>
-        ((SeekBarViewModel)((FrameworkElement)sender).Tag).EndDrag();
+    // Newly plugged interfaces show up without restarting.
+    private void Outputs_DropDownOpened(object? sender, EventArgs e) => vm.RefreshOutputDevices();
 
     /// <summary>
     /// Records the pressed key combination into a shortcut box. Works for any box whose Text binding

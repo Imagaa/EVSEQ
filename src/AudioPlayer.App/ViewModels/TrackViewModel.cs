@@ -73,14 +73,19 @@ public sealed partial class TrackViewModel : ObservableObject
     public string FadeInText
     {
         get => Track.FadeInMs is { } ms ? Seconds.Format(ms) : "";
-        set { Track.FadeInMs = ParseFade(value); owner.MarkDirty(); }
+        set { Track.FadeInMs = ParseFade(value); owner.Engine.Refresh(Track); owner.MarkDirty(); }
     }
 
     public string FadeOutText
     {
         get => Track.FadeOutMs is { } ms ? Seconds.Format(ms) : "";
-        set { Track.FadeOutMs = ParseFade(value); owner.MarkDirty(); }
+        set { Track.FadeOutMs = ParseFade(value); owner.Engine.Refresh(Track); owner.MarkDirty(); }
     }
+
+    // Effective values the engine will use (override or project default)
+    public double FadeInSeconds => (Track.FadeInMs ?? owner.Project.DefaultFade.FadeInMs) / 1000.0;
+    public double FadeOutSeconds => (Track.FadeOutMs ?? owner.Project.DefaultFade.FadeOutMs) / 1000.0;
+    public FadeCurve Curve => owner.Project.DefaultFade.Curve;
 
     public string DefaultFadeIn => Seconds.Format(owner.Project.DefaultFade.FadeInMs);
     public string DefaultFadeOut => Seconds.Format(owner.Project.DefaultFade.FadeOutMs);
