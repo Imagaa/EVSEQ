@@ -480,3 +480,13 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# ---- EVSEQ ----
+# Private product document (kept locally only)
+prd.md
+# Show/project files and their atomic-save temp files never belong in the source tree
+*.approj
+*.approj.tmp
+# Local editor / assistant folders
+.vscode/
+.claude/

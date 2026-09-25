@@ -19,6 +19,7 @@ MinVersion=10.0
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+LicenseFile=..\LICENSE
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName} ({#AppShortName})
 ; App icon: add SetupIconFile=EVSEQ.ico once the logo is ready.
@@ -31,6 +32,8 @@ Name: "desktopicon"; Description: "Buat ikon di desktop"; Flags: unchecked
 
 [Files]
 Source: "..\artifacts\publish\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
+Source: "..\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; DestName: "THIRD-PARTY-NOTICES.txt"; Flags: ignoreversion
 
 [InstallDelete]
 ; executable of the earlier "Audio Player" builds, replaced by EVSEQ.exe
